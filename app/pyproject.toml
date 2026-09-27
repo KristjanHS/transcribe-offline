@@ -7,7 +7,7 @@ requires-python = "==3.12.*"
 dependencies = ["faster-whisper==1.2.1"]
 
 [dependency-groups]
-dev = ["bandit", "pip-audit", "pyright", "pytest", "pytest-socket", "ruff"]
+dev = ["bandit", "pip-audit", "pyright", "pytest", "pytest-socket", "ruff", "zizmor"]
 
 [tool.uv]
 # Never build the project: a build backend is not hash-pinned by uv.lock.

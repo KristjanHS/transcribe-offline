@@ -1,5 +1,9 @@
 name: ci
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly, so a new advisory against a pinned version is seen
 permissions:
   contents: read
 defaults:
@@ -28,6 +32,7 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pyright
       - run: uv run bandit -q -r transcribe_offline
+      - run: uv run zizmor --offline ../.github
       - run: uv run pytest
       - name: pip-audit on the locked runtime deps
         if: runner.os == 'Linux'
