@@ -34,7 +34,8 @@ into the process. The runtime guarantee therefore rests on:
 - huggingface_hub's HTTP client (`httpx`) and Xet downloader not being installed
   (`[tool.uv] exclude-dependencies`, checked by `tests/test_imports.py`), so it cannot download even
   if asked;
-- `HF_HUB_OFFLINE=1` being set before `faster_whisper` is imported (`engine.load_model`, `__main__.py`);
+- `HF_HUB_OFFLINE=1` being set in `engine.load_model` immediately before the only runtime import of
+  `faster_whisper`;
 - every model loading from a local folder path;
 - `engine.load_model` refusing to start if any of the five required model files is missing, so
   faster-whisper never falls back to downloading a tokenizer;
