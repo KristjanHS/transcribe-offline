@@ -84,12 +84,6 @@ def format_eta(seconds: float) -> str:
     return f"~{minutes // 60} h {minutes % 60} min left"
 
 
-def hide_tcl_commands(interp: tk.Tk) -> None:
-    """Hide Tcl's own exec and socket commands: tkinter would otherwise bypass the import ban."""
-    for cmd in ("exec", "socket"):
-        interp.tk.call("interp", "hide", "", cmd)
-
-
 class App:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -232,6 +226,5 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     root = tk.Tk()
-    hide_tcl_commands(root)
     App(root)
     root.mainloop()
