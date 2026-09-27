@@ -1,4 +1,5 @@
 import ast
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,7 @@ ALLOWED = {
     "transcribe_offline.models",
 }
 DYNAMIC = {"__import__", "importlib", "eval", "exec"}
+EXCLUDED = ["onnxruntime"]  # [tool.uv] exclude-dependencies
 
 
 @pytest.mark.parametrize("name", RUNTIME)
@@ -42,3 +44,8 @@ def test_runtime_imports_are_allow_listed(name: str) -> None:
             assert node.id not in DYNAMIC, f"{name}:{node.lineno} {node.id}"
         elif isinstance(node, ast.Attribute):
             assert node.attr not in DYNAMIC, f"{name}:{node.lineno} {node.attr}"
+
+
+@pytest.mark.parametrize("module", EXCLUDED)
+def test_excluded_dependency_is_not_installed(module: str) -> None:
+    assert importlib.util.find_spec(module) is None
