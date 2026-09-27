@@ -16,15 +16,21 @@ jobs:
         with:
           path: models
           key: models-${{ hashFiles('transcribe_offline/models.py') }}
+      - name: Mark the install start
+        shell: pwsh
+        run: New-Item "$env:RUNNER_TEMP\install-t0" -ItemType File -Force
       - name: install.bat end to end
         shell: cmd
         run: install.bat
-      - name: Nothing written outside the folder
+      - name: Nothing written outside the folder (user profile, incl. %TEMP%, + uv's registry key)
         shell: pwsh
         run: |
-          $paths = "$env:USERPROFILE\.local\bin\python*.exe", "HKCU:\Software\Python\Astral",
-            "$env:LOCALAPPDATA\uv", "$env:APPDATA\uv"
-          foreach ($p in $paths) { if (Test-Path $p) { Write-Error "Written outside the folder: $p"; exit 1 } }
+          $t0 = (Get-Item "$env:RUNNER_TEMP\install-t0").LastWriteTimeUtc
+          $new = @(Get-ChildItem $env:USERPROFILE -Recurse -File -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTimeUtc -gt $t0 } | ForEach-Object FullName)
+          if (Test-Path "HKCU:\Software\Python\Astral") { $new += "HKCU:\Software\Python\Astral" }
+          $new | ForEach-Object { Write-Host "Written outside the folder: $_" }
+          if ($new.Count) { exit 1 }
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.12.19"
