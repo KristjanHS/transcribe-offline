@@ -31,6 +31,9 @@ checks of our source only: they don't cover indirect access (e.g. `getattr`) or 
 do. Importing `faster_whisper` itself still loads `socket`, `subprocess`, `http` and `huggingface_hub`
 into the process. The runtime guarantee therefore rests on:
 
+- huggingface_hub's HTTP client (`httpx`) and Xet downloader not being installed
+  (`[tool.uv] exclude-dependencies`, checked by `tests/test_imports.py`), so it cannot download even
+  if asked;
 - `HF_HUB_OFFLINE=1` being set before `faster_whisper` is imported (`engine.load_model`, `__main__.py`);
 - every model loading from a local folder path;
 - `engine.load_model` refusing to start if any of the five required model files is missing, so

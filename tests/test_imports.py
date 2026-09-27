@@ -27,7 +27,7 @@ ALLOWED = {
     "transcribe_offline.models",
 }
 DYNAMIC = {"__import__", "importlib", "eval", "exec"}
-EXCLUDED = ["onnxruntime"]  # [tool.uv] exclude-dependencies
+EXCLUDED = ["onnxruntime", "hf_xet", "httpx", "fsspec", "click"]  # [tool.uv] exclude-dependencies
 
 
 @pytest.mark.parametrize("name", RUNTIME)
