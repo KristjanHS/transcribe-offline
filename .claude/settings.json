@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.venv/**)",
+      "Read(**/.uv/**)",
+      "Read(**/models/**)",
+      "Read(**/logs/**)",
+      "Read(**/__pycache__/**)",
+      "Read(**/*.egg-info/**)",
+      "Read(**/.ruff_cache/**)",
+      "Read(**/.pytest_cache/**)"
+    ]
+  }
+}
