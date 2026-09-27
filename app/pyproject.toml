@@ -2,7 +2,6 @@
 name = "transcribe-offline"
 version = "0.1.0"
 description = "Minimal offline speech-to-text GUI (Estonian + English, CPU, faster-whisper)."
-readme = "README.md"
 license = "MIT"
 requires-python = "==3.12.*"
 dependencies = ["faster-whisper==1.2.1"]

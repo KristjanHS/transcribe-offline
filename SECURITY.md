@@ -1,7 +1,7 @@
 # Security
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU. The whole app is
-under 500 lines of Python in `transcribe_offline/` plus two `.bat` files, written to be read in full.
+under 500 lines of Python in `app/transcribe_offline/` plus two `.bat` files, written to be read in full.
 
 ## What it does
 
@@ -18,9 +18,9 @@ tasks, no child processes at runtime, and no writes outside its folder except th
 
 ## Honest scope of the import ban
 
-Ruff rule `TID251` (config in `pyproject.toml`) forbids our code from importing `socket`, `urllib`,
+Ruff rule `TID251` (config in `app/pyproject.toml`) forbids our code from importing `socket`, `urllib`,
 `http`, `subprocess`, `huggingface_hub`, `ctypes` or calling `os.system`/`popen`/`startfile`/`spawn*`/
-`exec*`, everywhere except `transcribe_offline/setup.py` (install time). `tests/test_imports.py` parses
+`exec*`, everywhere except `app/transcribe_offline/setup.py` (install time). `app/tests/test_imports.py` parses
 the runtime modules (`__init__`, `__main__`, `app`, `engine`, `models`; not `setup.py`) and fails if any
 static import is outside an explicit allow-list, if anything but `WhisperModel` is imported from
 `faster_whisper`, or if `__import__`, `importlib`, `eval` or `exec` appear by name. Both are static
@@ -29,7 +29,7 @@ do. Importing `faster_whisper` itself still loads `socket`, `ssl`, `subprocess` 
 into the process. The runtime guarantee therefore rests on:
 
 - huggingface_hub's HTTP client (`httpx`) and Xet downloader not being installed
-  (`[tool.uv] exclude-dependencies`, checked by `tests/test_imports.py`), so it cannot download even
+  (`[tool.uv] exclude-dependencies`, checked by `app/tests/test_imports.py`), so it cannot download even
   if asked;
 - `HF_HUB_OFFLINE=1` being set in `engine.load_model` immediately before the only runtime import of
   `faster_whisper`;
@@ -46,8 +46,8 @@ into the process. The runtime guarantee therefore rests on:
 |------|------|-----|
 | github.com → release-assets.githubusercontent.com | uv 0.12.19 zip | SHA-256 in `install.bat` |
 | github.com (python-build-standalone, via uv) | Python 3.12.14 | uv's embedded hash table |
-| pypi.org / files.pythonhosted.org | wheels | `uv.lock` hashes (`uv sync --frozen`) |
-| huggingface.co → us.aws.cdn.hf.co (`model.bin`) | models | commit + SHA-256 per file in `transcribe_offline/models.py` |
+| pypi.org / files.pythonhosted.org | wheels | `app/uv.lock` hashes (`uv sync --frozen`) |
+| huggingface.co → us.aws.cdn.hf.co (`model.bin`) | models | commit + SHA-256 per file in `app/transcribe_offline/models.py` |
 
 Redirect hosts as observed with `curl -sI`; the hashes, not the hosts, are the integrity anchor.
 python-build-standalone's CDN host is whatever github.com redirects to (unverified until the first
@@ -59,7 +59,7 @@ never built (`[tool.uv] package = false`), so no unpinned build backend is fetch
 ## Verify it yourself (~15 min)
 
 1. Read `install.bat`.
-2. Run `uv lock --check`.
+2. In `app/` of a git clone, run `uv lock --check`.
 3. Run `uv run ruff check .` and `uv run pytest tests/test_imports.py` — they pass only if the runtime
    modules' static imports stay inside the ban and the allow-list. To see them bite, add
    `import subprocess` to `engine.py` and run both again.

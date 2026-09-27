@@ -2,6 +2,9 @@ name: ci
 on: [push, pull_request]
 permissions:
   contents: read
+defaults:
+  run:
+    working-directory: app
 env:
   # uv's managed Python, as install.bat uses; ubuntu's system Python has no tkinter.
   UV_PYTHON_PREFERENCE: only-managed
