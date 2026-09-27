@@ -23,8 +23,8 @@ Pick audio files, choose the language, press Start. Each `.txt` is saved beside 
 
 Known limit: proxies that require NTLM authentication may block the download.
 
-**Upgrade:** extract the new zip to a new folder, optionally copy the old `models\` folder in, run
-`install.bat`. **Uninstall:** delete the folder.
+**Upgrade:** extract the new zip to a new folder, optionally copy the old `app\models\` folder
+into the new `app\`, run `install.bat`. **Uninstall:** delete the folder.
 
 ## License
 
@@ -35,6 +35,8 @@ MIT License - see [LICENSE](LICENSE).
 ## Development
 
 _Everything below is for building or testing from source — not needed to [install the app](#install-windows-10-1803--11-no-admin-rights)._
+
+Run these in `app/` (the Python project; the release zip ships only it, the two `.bat` files and `LICENSE`).
 
 - `uv sync` · `uv run python -m transcribe_offline` (runs on Linux too; needs `models/`)
 - Models: `uv run python -m transcribe_offline.setup`

@@ -1,22 +1,22 @@
 @echo off
 setlocal
-cd /d "%~dp0"
-rem Installs into this folder: pinned uv -> locked Python deps -> pinned, SHA-256-verified models.
+cd /d "%~dp0app"
+rem Installs into the app folder: pinned uv -> locked Python deps -> pinned, SHA-256-verified models.
 rem Nothing is written outside this folder. No admin rights needed.
 
 set "UV_VERSION=0.12.19"
 set "UV_SHA256=6dbb02d79e419522f1c500f0adb1cddcff0cda7d59b0d66ea7f5e3b4a1b2f5f0"
 set "PYTHON_VERSION=3.12.14"
 
-set "UV_CACHE_DIR=%~dp0.uv\cache"
-set "UV_PYTHON_INSTALL_DIR=%~dp0.uv\python"
-set "UV_PROJECT_ENVIRONMENT=%~dp0.venv"
+set "UV_CACHE_DIR=%CD%\.uv\cache"
+set "UV_PYTHON_INSTALL_DIR=%CD%\.uv\python"
+set "UV_PROJECT_ENVIRONMENT=%CD%\.venv"
 set "UV_NO_CONFIG=1"
 set "UV_PYTHON_PREFERENCE=only-managed"
 set "UV_SYSTEM_CERTS=1"
 rem uv takes a lock file in %TEMP%; keep that (and any other temp file) in this folder.
-set "TMP=%~dp0.uv\tmp"
-set "TEMP=%~dp0.uv\tmp"
+set "TMP=%CD%\.uv\tmp"
+set "TEMP=%CD%\.uv\tmp"
 if not exist ".uv\tmp" mkdir ".uv\tmp"
 rem No python.exe in %USERPROFILE%\.local\bin, no HKCU registry entry.
 set "UV_PYTHON_INSTALL_BIN=0"

@@ -14,8 +14,8 @@ jobs:
           persist-credentials: false
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: models
-          key: models-${{ hashFiles('transcribe_offline/models.py') }}
+          path: app/models
+          key: models-${{ hashFiles('app/transcribe_offline/models.py') }}
       - name: install.bat end to end (after marking its start time)
         shell: cmd
         run: type nul > "%RUNNER_TEMP%\install-t0" && install.bat
@@ -35,7 +35,9 @@ jobs:
         with:
           version: "0.12.19"
       - run: uv sync --frozen
+        working-directory: app
       - name: Real-model smoke test (network blocked by pytest-socket)
+        working-directory: app
         run: uv run pytest -m slow
   publish:
     needs: install-and-smoke
