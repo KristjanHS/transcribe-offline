@@ -30,9 +30,10 @@ class ChecksumError(Exception):
 
 
 def open_url(url: str) -> IO[bytes]:
-    # Windows cert store via the default context; urllib honours HTTPS_PROXY.
+    # Only https URLs built from models.py pins. Windows cert store via the default context;
+    # urllib honours HTTPS_PROXY.
     context = ssl.create_default_context()
-    return urllib.request.urlopen(url, context=context, timeout=60)  # noqa: S310 — https pins only
+    return urllib.request.urlopen(url, context=context, timeout=60)  # noqa: S310  # nosec B310
 
 
 def sha256_of(path: Path) -> str:
