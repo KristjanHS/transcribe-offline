@@ -15,11 +15,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import IO
 
-from transcribe_offline.models import MODELS, ModelPin
+from transcribe_offline.models import MODELS, MODELS_ROOT, ModelPin
 
 log = logging.getLogger(__name__)
 
-MODELS_ROOT = Path("models")
 CHUNK = 1 << 20
 LOG_EVERY = 100 << 20
 

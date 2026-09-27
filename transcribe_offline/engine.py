@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,16 +16,7 @@ if TYPE_CHECKING:
 AUDIO_EXTENSIONS = (".wav", ".mp3", ".m4a", ".flac", ".ogg", ".wma", ".aac", ".mp4", ".mkv")
 
 
-@dataclass(frozen=True)
-class Lang:
-    code: str
-    model_dir: str
-
-
-LANGUAGES = {
-    "Estonian": Lang(code="et", model_dir="et"),
-    "English": Lang(code="en", model_dir="en"),
-}
+LANGUAGES = {"Estonian": "et", "English": "en"}  # name -> language code = folder under models/
 
 
 class Cancelled(Exception):
@@ -45,8 +35,8 @@ def missing_files(model_path: Path) -> list[str]:
     return [name for name in REQUIRED_FILES if not (model_path / name).is_file()]
 
 
-def load_model(models_root: Path, lang: Lang) -> WhisperModel:
-    path = models_root / lang.model_dir
+def load_model(models_root: Path, language: str) -> WhisperModel:
+    path = models_root / language
     missing = missing_files(path)
     if missing:
         raise ModelMissingError(f"Missing in {path}: {', '.join(missing)}. Run install.bat.")
@@ -85,7 +75,7 @@ def unique_destination(audio: Path) -> Path:
 def transcribe_file(
     model: WhisperModel,
     audio: Path,
-    lang: Lang,
+    language: str,
     *,
     timestamps: bool,
     on_progress: Callable[[float], None],
@@ -94,7 +84,7 @@ def transcribe_file(
     dest = unique_destination(audio)
     partial = dest.with_name(dest.name + ".partial")
     segments, info = model.transcribe(
-        str(audio), language=lang.code, beam_size=7, patience=1.2, repetition_penalty=1.05
+        str(audio), language=language, beam_size=7, patience=1.2, repetition_penalty=1.05
     )
     try:
         # Platform newline (CRLF on Windows).
