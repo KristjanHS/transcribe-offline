@@ -31,5 +31,5 @@ def test_matches_stt_faster(tmp_path: Path, name: str, timestamps: bool) -> None
         cancelled=lambda: False,
     )
     golden = FIXTURES / "golden" / f"{lang.code}-{'ts' if timestamps else 'plain'}.txt"
-    # splitlines() normalises CRLF (Windows output) against LF goldens.
-    assert out.read_text(encoding="utf-8").splitlines() == golden.read_text("utf-8").splitlines()
+    # Byte-exact except CRLF (Windows output) is normalised to the LF goldens.
+    assert out.read_bytes().replace(b"\r\n", b"\n") == golden.read_bytes().replace(b"\r\n", b"\n")

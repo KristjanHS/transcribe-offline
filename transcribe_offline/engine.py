@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -49,6 +50,7 @@ def load_model(models_root: Path, lang: Lang) -> WhisperModel:
     missing = missing_files(path)
     if missing:
         raise ModelMissingError(f"Missing in {path}: {', '.join(missing)}. Run install.bat.")
+    os.environ["HF_HUB_OFFLINE"] = "1"  # before faster_whisper loads huggingface_hub
     from faster_whisper import WhisperModel  # deferred: heavy import, only needed once a job starts
 
     return WhisperModel(str(path), device="cpu", compute_type="int8")
