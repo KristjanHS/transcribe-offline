@@ -171,7 +171,8 @@ class App:
 
     def open_folder(self) -> None:
         if self.last_saved is not None and sys.platform == "win32":
-            os.startfile(self.last_saved.parent)  # noqa: S606, TID251 — the only OS launch in the app
+            # The only OS launch in the app (SECURITY.md, "Does").
+            os.startfile(self.last_saved.parent)  # noqa: S606, TID251  # nosec B606
 
     def on_close(self) -> None:
         if self.worker is not None:
