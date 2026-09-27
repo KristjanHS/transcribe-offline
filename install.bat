@@ -2,13 +2,12 @@
 setlocal
 cd /d "%~dp0"
 rem Installs into this folder: pinned uv -> locked Python deps -> pinned, SHA-256-verified models.
-rem Nothing is written outside this folder except the Desktop shortcut. No admin rights needed.
+rem Nothing is written outside this folder. No admin rights needed.
 
 set "UV_VERSION=0.12.19"
 set "UV_SHA256=6dbb02d79e419522f1c500f0adb1cddcff0cda7d59b0d66ea7f5e3b4a1b2f5f0"
 set "PYTHON_VERSION=3.12.14"
 
-set "APP_DIR=%~dp0"
 set "UV_CACHE_DIR=%~dp0.uv\cache"
 set "UV_PYTHON_INSTALL_DIR=%~dp0.uv\python"
 set "UV_PROJECT_ENVIRONMENT=%~dp0.venv"
@@ -40,11 +39,8 @@ echo Installing Python %PYTHON_VERSION% and the locked dependencies ...
 echo Downloading and verifying the models (about 3 GB) ...
 ".venv\Scripts\python.exe" -m transcribe_offline.setup || goto :fail
 
-echo Creating the Desktop shortcut ...
-powershell -NoProfile -Command "$d = [Environment]::GetFolderPath('Desktop'); $s = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d 'Transcribe (offline).lnk')); $s.TargetPath = Join-Path $env:APP_DIR '.venv\Scripts\pythonw.exe'; $s.Arguments = '-m transcribe_offline'; $s.WorkingDirectory = $env:APP_DIR; $s.Save()" || echo Could not create the shortcut - start the app with Transcribe.bat instead.
-
 echo.
-echo Done. Start from the Desktop shortcut or Transcribe.bat.
+echo Done. Start the app with Transcribe.bat.
 if not defined CI pause
 exit /b 0
 
