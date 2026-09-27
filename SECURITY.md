@@ -1,7 +1,7 @@
 # Security
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU. The whole app is
-658 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus two `.bat` files,
+651 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus two `.bat` files,
 written to be read in full.
 
 ## What it does
@@ -34,7 +34,7 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 | Crafted audio file attacks FFmpeg | `engine.decode_audio`: `file` protocol only, 8 demuxers, audio-codec allow-list (FFmpeg's decoder whitelist, applied before any decoder runs) | unit tests |
 | A memory-corruption bug in FFmpeg or CTranslate2 | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
 | Our code opens a socket, starts a process or writes outside its folder | import ban (`TID251`, `test_imports.py`); runtime audit hook `guard.py` | static checks, unit tests, release smoke test |
-| Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; Tcl `exec`/`socket` hidden. The audit hook cannot see native code | Tcl: unit test; FFmpeg, CTranslate2: not verified |
+| Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; our code never passes Tcl text (no `.call`/`.eval`). The audit hook cannot see native code | Tcl: `test_imports.py`; FFmpeg, CTranslate2: not verified |
 | Install or app writes outside the folder | `install.bat` points uv's cache, Python and temp files at `app\`; `guard.py` at runtime | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
 | Tampered download at install time | SHA-256 pins (table below) | `test_setup.py`; release CI runs `install.bat` |
 | Tampered release zip | provenance attestation | the user (README install step 1) |
@@ -48,7 +48,7 @@ Ruff rule `TID251` (config in `app/pyproject.toml`) forbids our code from import
 `exec*`, everywhere except `app/transcribe_offline/setup.py` (install time). `app/tests/test_imports.py` parses
 the runtime modules (`__init__`, `__main__`, `app`, `engine`, `guard`, `models`; not `setup.py`) and fails if any
 static import is outside an explicit allow-list, if anything but `WhisperModel` is imported from
-`faster_whisper`, or if `__import__`, `importlib`, `eval` or `exec` appear by name. Both are static
+`faster_whisper`, or if `__import__`, `importlib`, `eval`, `exec` or `call` (Tcl) appear by name. Both are static
 checks of our source only: they don't cover indirect access (e.g. `getattr`) or what imported libraries
 do. Importing `faster_whisper` itself still loads `socket`, `ssl`, `subprocess` and `huggingface_hub`
 into the process. The runtime guarantee therefore rests on:

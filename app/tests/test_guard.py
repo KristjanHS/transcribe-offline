@@ -1,10 +1,8 @@
 import os
-import tkinter as tk
 from pathlib import Path
 
 import pytest
 
-from transcribe_offline.app import hide_tcl_commands
 from transcribe_offline.guard import Guard
 
 
@@ -41,11 +39,3 @@ def test_rename_and_remove_outside_are_blocked(guard: Guard, tmp_path: Path) -> 
         guard("os.rename", (partial, tmp_path / "talk.txt", -1, -1))
     with pytest.raises(PermissionError):
         guard("os.remove", (tmp_path / "talk.txt", -1))
-
-
-def test_tcl_exec_and_socket_are_hidden() -> None:
-    interp = tk.Tcl()
-    hide_tcl_commands(interp)
-    for cmd in ("exec", "socket"):
-        with pytest.raises(tk.TclError, match="invalid command name"):
-            interp.call(cmd)
