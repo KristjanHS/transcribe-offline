@@ -1,2 +1,3 @@
 *.bat text eol=crlf
 .claude/ export-ignore
+Makefile export-ignore
