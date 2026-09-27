@@ -8,7 +8,7 @@ under 500 lines of Python in `transcribe_offline/` plus two `.bat` files, writte
 - Reads the audio files the user picks.
 - Writes `<name>.txt` beside each one (`<name> (2).txt` if that exists), via a transient
   `<name>.txt.partial` beside it that is renamed on success and deleted on cancel or failure.
-- Writes `logs\app.log` inside the app folder.
+- Writes `logs\app.log` inside the app folder, overwritten on each launch.
 
 ## What it never does
 
