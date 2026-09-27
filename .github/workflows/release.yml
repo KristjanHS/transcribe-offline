@@ -16,18 +16,18 @@ jobs:
         with:
           path: models
           key: models-${{ hashFiles('transcribe_offline/models.py') }}
-      - name: Mark the install start
-        shell: pwsh
-        run: New-Item "$env:RUNNER_TEMP\install-t0" -ItemType File -Force
-      - name: install.bat end to end
+      - name: install.bat end to end (after marking its start time)
         shell: cmd
-        run: install.bat
-      - name: Nothing written outside the folder (user profile, incl. %TEMP%, + uv's registry key)
+        run: type nul > "%RUNNER_TEMP%\install-t0" && install.bat
+      - name: Nothing written outside the folder (user profile, %TEMP%, + uv's registry key)
         shell: pwsh
         run: |
           $t0 = (Get-Item "$env:RUNNER_TEMP\install-t0").LastWriteTimeUtc
-          $new = @(Get-ChildItem $env:USERPROFILE -Recurse -File -Force -ErrorAction SilentlyContinue |
-            Where-Object { $_.LastWriteTimeUtc -gt $t0 } | ForEach-Object FullName)
+          # Windows' own files: registry hives, certificate-revocation cache, pwsh startup cache.
+          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\PowerShell\\StartupProfileData'
+          $new = @(Get-ChildItem $env:USERPROFILE, $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.CreationTimeUtc -gt $t0 -or (!$_.PSIsContainer -and $_.LastWriteTimeUtc -gt $t0) } |
+            ForEach-Object FullName | Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
           if (Test-Path "HKCU:\Software\Python\Astral") { $new += "HKCU:\Software\Python\Astral" }
           $new | ForEach-Object { Write-Host "Written outside the folder: $_" }
           if ($new.Count) { exit 1 }

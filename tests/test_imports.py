@@ -1,5 +1,6 @@
 import ast
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,6 @@ ALLOWED = {
     "faster_whisper",
     "transcribe_offline",
     "transcribe_offline.app",
-    "transcribe_offline.engine",
     "transcribe_offline.models",
 }
 DYNAMIC = {"__import__", "importlib", "eval", "exec"}
@@ -47,3 +47,8 @@ def test_runtime_imports_are_allow_listed(name: str) -> None:
 @pytest.mark.parametrize("module", EXCLUDED)
 def test_excluded_dependency_is_not_installed(module: str) -> None:
     assert importlib.util.find_spec(module) is None
+
+
+def test_faster_whisper_imports_without_excluded_dependencies() -> None:
+    importlib.import_module("faster_whisper")  # ImportError if hub/tokenizers need one eagerly
+    assert not set(EXCLUDED) & set(sys.modules)

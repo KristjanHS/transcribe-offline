@@ -25,7 +25,7 @@ the runtime modules (`__init__`, `__main__`, `app`, `engine`, `models`; not `set
 static import is outside an explicit allow-list, if anything but `WhisperModel` is imported from
 `faster_whisper`, or if `__import__`, `importlib`, `eval` or `exec` appear by name. Both are static
 checks of our source only: they don't cover indirect access (e.g. `getattr`) or what imported libraries
-do. Importing `faster_whisper` itself still loads `socket`, `subprocess`, `http` and `huggingface_hub`
+do. Importing `faster_whisper` itself still loads `socket`, `ssl`, `subprocess` and `huggingface_hub`
 into the process. The runtime guarantee therefore rests on:
 
 - huggingface_hub's HTTP client (`httpx`) and Xet downloader not being installed
