@@ -64,14 +64,16 @@ repo-settings steps.
   (`guard.py` audit hook).
 - Stage 3 (installer/CI): S7.1, S7.2, S7.3, S3.2, S9.1 (installed-env smoke test with the guard, then
   the outside-folder check), S9.2, S9.3, S10.2, S10.3, S10.5.
-- Stage 4 (docs): fix SECURITY.md:4 "under 500 lines" (app code is 651 after Stages 1-2); S1.x, S2.2, S4.3, S5.3, S6.x, S7.4, S8.1, S8.3, S10.1, S10.4; README and
+  Stage 3 rulings: S9.1 = inline guarded `python -c` in the shipped `.venv`, one outside-folder check after it, dev-env pytest step dropped.
+  S7.1 = pinned uv.exe hash, mismatch → re-download. S10.2 = weekly cron + Dependabot security updates (repo setting), no dependabot.yml, SLA line → Stage 4. S10.3 = SBOM joins the provenance subjects.
+- Stage 4 (docs): fix SECURITY.md:4 "under 500 lines" (app code is 651 after Stages 1-2); S1.x, S2.2, S4.3, S5.3, S6.x, S7.4, S8.1, S8.3, S10.1, S10.2 SLA line, S10.4; README and
   SECURITY.md.
 - Stage 5: full verification and code review.
 
-**Progress:** Stage 1 is done (`45a8d5a`) and Stage 2 is done (`87027d8`). Unit tests, pyright and
-the slow real-model test pass. The guard was checked live on Linux; Windows is unverified until
-Stage 3's installed-env smoke test runs in release.yml. **Next: Stage 3.** Stage 5's review covers
-`b92ed3d..HEAD`.
+**Progress:** Stages 1 (`45a8d5a`), 2 (`87027d8`) and 3 are done. S10.5: huggingface-hub stays, as
+`faster_whisper/utils.py:7` imports it at top level. Stage 3's Windows paths (uv.exe re-hash,
+guarded smoke, outside-folder check) are unverified until release.yml runs. **Next: Stage 4.**
+Stage 5's review covers `b92ed3d..HEAD`.
 
 ---
 
@@ -132,7 +134,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   **Falsifier (do before claiming either way):** on a machine with network, open a crafted `.wav`
   holding an SDP body that points at `rtp://127.0.0.1:<port>`. Also try a DASH MPD pointing at
   `http://127.0.0.1:<port>`. Listen on the port. A connection means High is confirmed.
-- [ ] **S3.2 (Medium) The release smoke test's "network blocked" is Python-only.**
+- [x] **S3.2 (Medium) The release smoke test's "network blocked" is Python-only.**
   `release.yml:39` says "network blocked by pytest-socket". pytest-socket patches
   `socket.socket` and cannot see FFmpeg's, CTranslate2's or Tcl's native sockets.
   **Fix:** run the smoke step with the runner firewalled. On `windows-latest`,
@@ -239,7 +241,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
 
 ## Angle 7 — Install-time supply chain & integrity at rest
 
-- [ ] **S7.1 (Medium) Once installed, nothing is verified again.** `install.bat:25` skips download
+- [x] **S7.1 (Medium) Once installed, nothing is verified again.** `install.bat:25` skips download
   and verification when `.uv\uv.exe` exists. Only the zip was ever hashed, never the extracted
   exe. At runtime, `load_model` (`engine.py:38-48`) checks that the model files **exist**, not
   their SHA-256. The whole install tree (uv.exe, `.venv`, `models/`) is user-writable by design.
@@ -252,14 +254,14 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   to re-verify everything". (c) Optionally add a "Verify installation" command that also runs
   `uv sync --frozen --check` or re-hashes `.venv` against RECORD files.
   **Cost:** 2 bat lines plus a doc line.
-- [ ] **S7.2 (Low) `install.bat` finds its tools through the CWD and PATH.** `curl.exe`,
+- [x] **S7.2 (Low) `install.bat` finds its tools through the CWD and PATH.** `curl.exe`,
   `certutil`, `findstr` and `tar` (`install.bat:28-36`) are resolved by cmd.exe, which searches
   the **current directory** (`app\`) before PATH. The hash check depends on `certutil` and
   `findstr` telling the truth.
   **Fix:** call `%SystemRoot%\System32\curl.exe`, `…\certutil.exe`, `…\findstr.exe` and
   `…\tar.exe` explicitly.
   **Cost:** 4 edited lines.
-- [ ] **S7.3 (Low) `UV_*` environment variables inherited from the user's environment can change
+- [x] **S7.3 (Low) `UV_*` environment variables inherited from the user's environment can change
   the trust chain.** `UV_NO_CONFIG=1` (`install.bat:14`) disables config **files** only.
   Environment variables such as `UV_PYTHON_DOWNLOADS_JSON_URL` (which replaces the download
   metadata, hashes included), `UV_PYTHON_INSTALL_MIRROR`, `UV_INDEX_URL`, `UV_INSECURE_HOST` and
@@ -304,7 +306,7 @@ Already good: SHA-pinned actions, `persist-credentials: false`, `contents: read`
 write permissions granted only to the `publish` job, `--verify-tag`, and the release-time model
 cache re-verified by `setup.py`'s hashes, so cache poisoning cannot land an unverified model.
 
-- [ ] **S9.1 (Medium) The runtime invariants are not tested in CI.** The outside-folder check
+- [x] **S9.1 (Medium) The runtime invariants are not tested in CI.** The outside-folder check
   (`release.yml:22-33`) runs **after `install.bat`, before the app runs**. What the app does at
   runtime, such as Tcl, huggingface_hub or ctranslate2 creating `~\.cache\…` or writing
   `%APPDATA%`, is never checked. The smoke test (`release.yml:34-41`) also runs in a
@@ -315,11 +317,11 @@ cache re-verified by `setup.py`'s hashes, so cache poisoning cannot land an unve
   non-pytest smoke script). Then repeat the outside-folder check **after** it, with the network
   blocked (S3.2).
   **Cost:** ~10 YAML lines.
-- [ ] **S9.2 (Low) There is no workflow linter.**
+- [x] **S9.2 (Low) There is no workflow linter.**
   **Fix:** add `zizmor` (GitHub Actions security linter) to `ci.yml`, as a pinned dev dependency
   or `uvx zizmor==<pin> .github`.
   **Cost:** 1 line.
-- [ ] **S9.3 (Low) The `publish` job has no environment protection.** A tag push publishes with no
+- [x] **S9.3 (Low) The `publish` job has no environment protection.** A tag push publishes with no
   human gate.
   **Fix:** a `release` environment with a required reviewer (the maintainer) and deployment
   restricted to `v*` tags. This complements S8.2.
@@ -333,14 +335,14 @@ cache re-verified by `setup.py`'s hashes, so cache poisoning cannot land an unve
   own CVE feeds, not as PyPI advisories. `trivy fs` also reported 0 against `uv.lock` alone.
   **Fix:** write down the list of native components and their upstream versions (below) and check
   it on each release. Optionally run `trivy`/`grype` on the installed `.venv` in `release.yml`.
-- [ ] **S10.2 (Medium) Audits run only when code changes.** `pip-audit` runs on push and PR only.
+- [x] **S10.2 (Medium) Audits run only when code changes.** `pip-audit` runs on push and PR only.
   A CVE published against a pinned version is not noticed until the next commit. There is no
   Dependabot or Renovate for `uv.lock`, the actions, or the uv and Python pins in `install.bat`.
   **Fix:** add `schedule: - cron: "0 6 * * 1"` to `ci.yml` (weekly), and Dependabot for
   `github-actions` plus `uv`. Record a patch-release SLA in `SECURITY.md`, for example "high-sev
   in a runtime dep → release within 14 days".
   **Cost:** ~10 lines.
-- [ ] **S10.3 (Low) No SBOM is published.** Reviewers and enterprise intake want one.
+- [x] **S10.3 (Low) No SBOM is published.** Reviewers and enterprise intake want one.
   **Fix:** in `publish`, `uv export --frozen --no-dev --format cyclonedx1.5 > sbom.cdx.json` (or
   generate it with `cyclonedx-py` from `requirements.txt`), attach it to the release and attest it.
   **Cost:** ~3 YAML lines.
@@ -348,7 +350,7 @@ cache re-verified by `setup.py`'s hashes, so cache poisoning cannot land an unve
   `generic-api-key`, so a future secret-scan gate would fail on them.
   **Fix:** add a `.gitleaks.toml` allowlist for `models.py` hex-64 values when a gitleaks gate is
   added. Not before, per Invariant 4.
-- [ ] **S10.5 (Low) The runtime installs more than it uses.** `huggingface-hub`, `filelock`,
+- [x] **S10.5 (Low) The runtime installs more than it uses.** `huggingface-hub`, `filelock`,
   `pyyaml`, `tqdm`, `packaging` and `colorama` are in the runtime set but only needed for download
   paths faster-whisper never takes here. `exclude-dependencies` already strips the HTTP stack.
   **Fix:** check whether `huggingface-hub` can be excluded too, i.e. whether faster-whisper
