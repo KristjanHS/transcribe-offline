@@ -14,10 +14,10 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from transcribe_offline import engine
+from transcribe_offline.models import MODELS_ROOT
 
 log = logging.getLogger(__name__)
 
-MODELS_ROOT = Path("models")
 LOG_FILE = Path("logs") / "app.log"
 POLL_MS = 100
 
@@ -32,7 +32,7 @@ class Event:
 
 def run_job(
     files: list[Path],
-    lang: engine.Lang,
+    language: str,
     timestamps: bool,
     events: queue.Queue[Event],
     cancel: threading.Event,
@@ -40,7 +40,7 @@ def run_job(
 ) -> None:
     """Worker-thread body: load the model once, transcribe files in order, report via events."""
     try:
-        model = engine.load_model(models_root, lang)
+        model = engine.load_model(models_root, language)
     except Exception as exc:
         log.exception("Model load failed")
         events.put(Event("failed", text=str(exc)))
@@ -54,7 +54,7 @@ def run_job(
             txt = engine.transcribe_file(
                 model,
                 audio,
-                lang,
+                language,
                 timestamps=timestamps,
                 on_progress=lambda f: events.put(Event("progress", fraction=f)),
                 cancelled=cancel.is_set,
