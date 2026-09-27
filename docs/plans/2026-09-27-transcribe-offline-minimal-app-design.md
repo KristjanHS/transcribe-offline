@@ -175,7 +175,7 @@ Nothing is written outside this folder except: the Desktop shortcut, and the `.t
 ### CI (GitHub Actions)
 
 - All actions pinned by commit SHA; `permissions: contents: read`; no secrets.
-- **Every push, ubuntu + windows:** `ruff check` + `ruff format --check`, `pyright`, `bandit -r src`, `pytest` (with `--disable-socket`), `uv lock --check`, and `pip-audit` on `uv export --frozen`.
+- **Every push, ubuntu + windows:** `ruff check` + `ruff format --check`, `pyright`, `bandit -r transcribe_offline`, `pytest` (with `--disable-socket`), `uv lock --check`, and `pip-audit` on `uv export --frozen`.
   - Ruff config includes `S` (bandit), `T201`, and a `TID251` banned-api rule over `transcribe_offline/`.
     - Banned: `socket`, `urllib`, `http`, `subprocess`, `huggingface_hub`, `ctypes`, `os.system`, `os.popen`, `os.startfile`, `os.spawn*`, `os.exec*`.
     - A per-file ignore exists **only** for `transcribe_offline/setup.py`, plus the single inline `noqa` on the `os.startfile` line in `app.py`.
@@ -191,7 +191,7 @@ Nothing is written outside this folder except: the Desktop shortcut, and the `.t
 
 - Unit tests, no models: `fmt_time` (incl. NaN/inf), `format_line` both modes, `unique_destination` collisions, extension filter case-insensitivity, `setup.py` verify logic (good hash / bad hash / partial file) against a local temp file — **no mocks/monkeypatch; inject the fetch function as a defaulted parameter**.
 - Golden parity test (`-m slow`, needs models):
-  - **Input:** a short **speech** clip, about 20–30 s, license-clean, committed under `tests/fixtures/`. stt-faster's `tests/test_short.mp3` is only 1,953 bytes and probably has no speech, so it won't do.
+  - **Input (ruled 2026-09-27):** `et` = TalTech `demo/etteütlus2024.wav` (verbatim repo, commit `3b546a06`) trimmed to ~25 s; `en` = a ~25 s LibriVox public-domain clip. Source URLs + licenses in `tests/fixtures/README.md`.
   - **Runs:** both languages, with timestamps on and off.
   - **Goldens:** `.txt` files generated **once** from stt-faster's GUI command: `python -m backend.cli.main transcribe process <dir> --preset {et-large|turbo} --variant 61 --language {et|en} --output-format txt --no-diarize --timestamps|--no-timestamps`, with `STT_DEVICE=cpu`.
   - **Generate goldens at the pinned model commits.** stt-faster resolves the unpinned `main`, so run it with `HF_HUB_OFFLINE=1` against an HF cache whose `refs/main` points at the commit pinned in `models.py`. Record both commits in `tests/fixtures/README.md`.
