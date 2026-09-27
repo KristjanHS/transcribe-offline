@@ -6,7 +6,14 @@ from pathlib import Path
 import pytest
 
 PACKAGE = Path(__file__).parents[1] / "transcribe_offline"
-RUNTIME = ["__init__.py", "__main__.py", "app.py", "engine.py", "models.py"]  # setup.py excluded
+RUNTIME = [
+    "__init__.py",
+    "__main__.py",
+    "app.py",
+    "engine.py",
+    "guard.py",
+    "models.py",
+]  # setup.py excluded
 ALLOWED = {
     "__future__",
     "av",
@@ -22,6 +29,7 @@ ALLOWED = {
     "os",
     "pathlib",
     "queue",
+    "sys",
     "threading",
     "time",
     "tkinter",
@@ -29,9 +37,11 @@ ALLOWED = {
     "faster_whisper",
     "transcribe_offline",
     "transcribe_offline.app",
+    "transcribe_offline.guard",
     "transcribe_offline.models",
 }
 DYNAMIC = {"__import__", "importlib", "eval", "exec"}
+TCL = {"exec", "socket", "open", "load", "expose"}  # Tcl commands our code must never .call()
 EXCLUDED = ["onnxruntime", "hf_xet", "httpx", "fsspec", "click"]  # [tool.uv] exclude-dependencies
 
 
@@ -49,6 +59,9 @@ def test_runtime_imports_are_allow_listed(name: str) -> None:
             assert node.id not in DYNAMIC, f"{name}:{node.lineno} {node.id}"
         elif isinstance(node, ast.Attribute):
             assert node.attr not in DYNAMIC, f"{name}:{node.lineno} {node.attr}"
+        if isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "call":
+            strings = {a.value for a in node.args if isinstance(a, ast.Constant)}
+            assert not strings & TCL, f"{name}:{node.lineno} {ast.unparse(node)}"
 
 
 @pytest.mark.parametrize("module", EXCLUDED)
