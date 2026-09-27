@@ -41,10 +41,10 @@ if not exist ".uv\uv.exe" (
     )
     "%SYS%\tar.exe" -xf ".uv\uv.zip" -C ".uv" || goto :fail
     del ".uv\uv.zip"
-    call :uv_ok || (
-        echo The extracted uv.exe does not match the pinned SHA-256.
-        goto :fail
-    )
+)
+call :uv_ok || (
+    echo uv.exe does not match the pinned SHA-256.
+    goto :fail
 )
 
 echo Installing Python %PYTHON_VERSION% and the locked dependencies ...

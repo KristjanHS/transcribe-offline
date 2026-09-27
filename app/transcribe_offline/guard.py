@@ -13,10 +13,11 @@ from pathlib import Path
 from transcribe_offline import APP_ROOT
 
 BLOCKED = {
-    "socket.connect",
-    "socket.bind",
-    "socket.sendto",
+    "socket.__new__",
     "socket.getaddrinfo",
+    "socket.gethostbyname",
+    "socket.gethostbyaddr",
+    "socket.getnameinfo",
     "subprocess.Popen",
     "os.system",
     "os.startfile",
