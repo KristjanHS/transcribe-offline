@@ -1,10 +1,16 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(du:*)",
+      "Bash(stat:*)",
+      "Bash(sha256sum:*)",
+      "Bash(tail:*)",
+      "Bash(head:*)"
+    ],
     "deny": [
       "Read(**/.venv/**)",
       "Read(**/.uv/**)",
-      "Read(**/models/**)",
-      "Read(**/logs/**)",
       "Read(**/__pycache__/**)",
       "Read(**/*.egg-info/**)",
       "Read(**/.ruff_cache/**)",
