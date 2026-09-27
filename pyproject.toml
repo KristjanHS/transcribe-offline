@@ -13,8 +13,10 @@ dev = ["bandit", "pip-audit", "pyright", "pytest", "pytest-socket", "ruff"]
 [tool.uv]
 # Never build the project: a build backend is not hash-pinned by uv.lock.
 package = false
-# Silero VAD only; engine never enables vad_filter.
-exclude-dependencies = ["onnxruntime"]
+exclude-dependencies = [
+    "onnxruntime",  # Silero VAD only; engine never enables vad_filter.
+    "hf-xet", "httpx", "fsspec", "click",  # Hub download/CLI stack; models load from a local path.
+]
 
 [tool.ruff]
 line-length = 100
