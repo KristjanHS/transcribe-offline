@@ -1,5 +1,7 @@
 # transcribe-offline — minimal reviewable GUI app (design)
 
+**Status:** ✅ SHIPPED 2026-09-27 (slices 1–4 on `main`); owed: first Windows run of `release.yml` via workflow_dispatch.
+
 **Date:** 2026-09-27 · **Repo:** https://github.com/KristjanHS/transcribe-offline (local: `~/projects/transcribe-offline`) · **Source of behaviour:** stt-faster (`~/projects/stt-faster`) at `f967efa`; all `backend/…`, `installer/…` cites below are stt-faster paths. · **Spec review:** fresh-agent review 2026-09-27, corrections folded in.
 
 ## Goal
