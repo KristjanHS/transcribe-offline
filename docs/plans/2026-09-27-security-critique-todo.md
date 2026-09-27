@@ -68,6 +68,11 @@ repo-settings steps.
   SECURITY.md.
 - Stage 5: full verification and code review.
 
+**Progress:** Stage 1 is done (`45a8d5a`) and Stage 2 is done (`87027d8`). Unit tests, pyright and
+the slow real-model test pass. The guard was checked live on Linux; Windows is unverified until
+Stage 3's installed-env smoke test runs in release.yml. **Next: Stage 3.** Stage 5's review covers
+`b92ed3d..HEAD`.
+
 ---
 
 ## Angle 1 — Threat model & assurance claims
@@ -92,7 +97,7 @@ repo-settings steps.
 The attacker's easiest route in is a crafted audio file that the user is persuaded to transcribe
 (an email attachment, a shared folder).
 
-- [ ] **S2.1 (High) FFmpeg runs with every format and codec, and picks the format from the file's
+- [x] **S2.1 (High) FFmpeg runs with every format and codec, and picks the format from the file's
   content.** `engine.is_audio` (`engine.py:30-31`) checks only the extension, so it is not a
   security boundary. faster-whisper calls `av.open(input_file, mode="r", metadata_errors="ignore")`
   (`faster_whisper/audio.py:46`) with no `format`, `format_whitelist` or `codec_whitelist`. A
@@ -116,7 +121,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
 
 ## Angle 3 — Runtime network isolation (Invariant 1)
 
-- [ ] **S3.1 (High, unverified) FFmpeg can reach the network and runtime egress is not
+- [x] **S3.1 (High, unverified) FFmpeg can reach the network and runtime egress is not
   constrained.** A probe on 2026-09-27 showed the bundled FFmpeg attempts `udp://` opens (the
   sandbox returned `PermissionError`, not "protocol not found"). `tcp/http/https` are also present,
   as are the `sdp`/`rtp`/`rtsp`/`hls`/`dash` demuxers. `av.open` on a local path leaves
@@ -134,7 +139,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   `New-NetFirewallRule -Direction Outbound -Action Block` for the Python executable, or block all
   outbound after the install step. Or rename the step so it does not over-claim.
   **Cost:** ~3 YAML lines.
-- [ ] **S3.3 (Low) The offline env vars are set late and are process-global.** `engine.py:44-45`
+- [x] **S3.3 (Low) The offline env vars are set late and are process-global.** `engine.py:44-45`
   sets `HF_HUB_OFFLINE` just before import. That works, but a future import of
   `faster_whisper`/`huggingface_hub` elsewhere (a new module, a test helper) would come before it.
   **Fix:** set both vars at the top of `__main__.py`, before any other import, and assert
@@ -143,7 +148,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
 
 ## Angle 4 — Process capability confinement & least privilege
 
-- [ ] **S4.1 (Medium) tkinter's Tcl interpreter is a way around the import ban.** `import tkinter`
+- [x] **S4.1 (Medium) tkinter's Tcl interpreter is a way around the import ban.** `import tkinter`
   is allow-listed (`test_imports.py:21`). The Tcl interpreter behind it has `exec` (spawn
   processes), `socket` (network) and `open "|cmd"`. `root.tk.call("exec", …)` or
   `root.call("socket", …)` passes both TID251 and the AST test. `DYNAMIC` (`test_imports.py:28`)
@@ -155,7 +160,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   And/or (b) have the AST test reject `.call(` whose first string argument is in that set. And/or
   (c) add it to "Honest scope" in `SECURITY.md`.
   **Cost:** 2 lines (a), ~4 lines (b), or 1 doc line (c).
-- [ ] **S4.2 (Medium) Nothing is enforced at runtime.** Every "never" is a static property of our
+- [x] **S4.2 (Medium) Nothing is enforced at runtime.** Every "never" is a static property of our
   source. `sys.addaudithook` (PEP 578, cannot be removed once installed) can raise on
   `socket.connect`, `socket.getaddrinfo`, `subprocess.Popen`, `os.system`, `os.startfile`,
   `os.exec`, `os.spawn`, `ctypes.dlopen`, and on `open` in write mode outside the install folder or
@@ -173,7 +178,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
 
 ## Angle 5 — File-system integrity (output writes, Invariant 3)
 
-- [ ] **S5.1 (Medium) The transcript write can overwrite files; check-then-act race.**
+- [x] **S5.1 (Medium) The transcript write can overwrite files; check-then-act race.**
   `unique_destination` (`engine.py:66-72`) checks `exists()`, then writing starts minutes later.
   `open(partial, "w")` (`engine.py:91`) truncates any existing `<name>.txt.partial` and follows a
   symlink or junction planted at that name. `partial.replace(dest)` (`engine.py:98`) silently
@@ -186,7 +191,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   **Falsifier:** tests that pre-create `dest` after `unique_destination` returns, and pre-create the
   `.partial`, then assert neither is clobbered. Run them against the current code first to show
   they fail.
-- [ ] **S5.2 (Low) Paths depend on the working directory.** `MODELS_ROOT = Path("models")`
+- [x] **S5.2 (Low) Paths depend on the working directory.** `MODELS_ROOT = Path("models")`
   (`models.py:6`) and `LOG_FILE = Path("logs")/…` (`app.py:19`) resolve against the CWD, which
   only `Transcribe.bat:3` sets. Started any other way (a shortcut with a different "Start in",
   `python -m` from elsewhere), the app loads `models/` from and writes `logs/` into an arbitrary
@@ -219,7 +224,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   needs an HKCU registry write, which Invariant 3 forbids.
   **Fix:** document it in "What it never does" and in the threat model, with the admin-side
   control: the `DontSendAdditionalData` / `Disabled` WER policy via GPO.
-- [ ] **S6.3 (Low) The log records sensitive file names and full paths.**
+- [x] **S6.3 (Low) The log records sensitive file names and full paths.**
   `log.exception("Transcription failed: %s", audio)` (`app.py:64`) writes the full path, which
   often names a person or patient. `app.log` persists until the next launch. Exception text can
   also include paths from FFmpeg.
