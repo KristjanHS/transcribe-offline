@@ -12,7 +12,7 @@ Minimal offline speech-to-text GUI (Estonian + English, CPU, faster-whisper). Th
 ## Commands
 
 - Env: `uv sync`
-- Tests: `uv run pytest` (unit, offline); `uv run pytest -m slow` (golden parity, needs `models/`)
+- Tests: `uv run pytest` (unit, offline); `uv run pytest -m slow` (real-model smoke test, needs `models/`)
 - Lint/types: `uv run ruff check . && uv run ruff format --check . && uv run pyright`
 - No `print` in app code — use `logging`. Tests: no monkeypatch/mocks; inject defaulted parameters.
 - Conventional Commits; primary branch `main`.

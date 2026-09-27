@@ -66,4 +66,4 @@ venv = ".venv"
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "--disable-socket -m 'not slow'"
-markers = ["slow: needs models/ (golden parity)"]
+markers = ["slow: needs models/ (real-model smoke test)"]
