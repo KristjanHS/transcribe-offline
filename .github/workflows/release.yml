@@ -12,6 +12,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: models
+          key: models-${{ hashFiles('transcribe_offline/models.py') }}
       - name: install.bat end to end (after marking its start time)
         shell: cmd
         run: type nul > "%RUNNER_TEMP%\install-t0" && install.bat
