@@ -1,11 +1,18 @@
 # transcribe-offline
 
+[![Latest release](https://img.shields.io/github/v/release/KristjanHS/transcribe-offline?sort=semver&label=latest%20release)](https://github.com/KristjanHS/transcribe-offline/releases/latest)
+[![Release date](https://img.shields.io/github/release-date/KristjanHS/transcribe-offline?label=released)](https://github.com/KristjanHS/transcribe-offline/releases/latest)
+
+**[⬇ Download the latest release (Windows)](https://github.com/KristjanHS/transcribe-offline/releases/latest)** · [All releases](https://github.com/KristjanHS/transcribe-offline/releases)
+
 Transcribe Estonian or English audio to text on your own computer. Nothing is uploaded; after
-installation the app works with the network unplugged. See `SECURITY.md` for exactly what it does.
+installation the app works with the network unplugged. See [SECURITY.md](SECURITY.md) for exactly what it does.
+_(Developers: jump to [Development](#development).)_
 
 ## Install (Windows 10 1803+ / 11, no admin rights)
 
-1. Download `transcribe-offline-vX.Y.Z.zip` from the Releases page and extract it to any folder.
+1. Open the [latest release](https://github.com/KristjanHS/transcribe-offline/releases/latest),
+   download `transcribe-offline-vX.Y.Z.zip` under **Assets** and extract it to any folder.
    Don't use a OneDrive-synced folder (Desktop and Documents often are).
 2. Double-click `install.bat`. It downloads about 3.5 GB (uv, Python, libraries, two speech models),
    verifying every file against a pinned hash. If it stops, run it again to continue; files already
@@ -19,7 +26,15 @@ Known limit: proxies that require NTLM authentication may block the download.
 **Upgrade:** extract the new zip to a new folder, optionally copy the old `models\` folder in, run
 `install.bat`. **Uninstall:** delete the folder.
 
+## License
+
+MIT License - see [LICENSE](LICENSE).
+
+---
+
 ## Development
+
+_Everything below is for building or testing from source — not needed to [install the app](#install-windows-10-1803--11-no-admin-rights)._
 
 - `uv sync` · `uv run python -m transcribe_offline` (runs on Linux too; needs `models/`)
 - Models: `uv run python -m transcribe_offline.setup`
