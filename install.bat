@@ -14,6 +14,10 @@ set "UV_PROJECT_ENVIRONMENT=%~dp0.venv"
 set "UV_NO_CONFIG=1"
 set "UV_PYTHON_PREFERENCE=only-managed"
 set "UV_SYSTEM_CERTS=1"
+rem uv takes a lock file in %TEMP%; keep that (and any other temp file) in this folder.
+set "TMP=%~dp0.uv\tmp"
+set "TEMP=%~dp0.uv\tmp"
+if not exist ".uv\tmp" mkdir ".uv\tmp"
 rem No python.exe in %USERPROFILE%\.local\bin, no HKCU registry entry.
 set "UV_PYTHON_INSTALL_BIN=0"
 set "UV_PYTHON_INSTALL_REGISTRY=0"
