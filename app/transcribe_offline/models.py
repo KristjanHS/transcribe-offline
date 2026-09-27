@@ -1,9 +1,10 @@
 """Model pins. The only place model URLs, commits and hashes live."""
 
 from dataclasses import dataclass
-from pathlib import Path
 
-MODELS_ROOT = Path("models")
+from transcribe_offline import APP_ROOT
+
+MODELS_ROOT = APP_ROOT / "models"
 
 # All mandatory: without tokenizer.json faster-whisper downloads a fallback tokenizer,
 # without preprocessor_config.json it silently uses the wrong mel-bin count.

@@ -9,10 +9,16 @@ PACKAGE = Path(__file__).parents[1] / "transcribe_offline"
 RUNTIME = ["__init__.py", "__main__.py", "app.py", "engine.py", "models.py"]  # setup.py excluded
 ALLOWED = {
     "__future__",
+    "av",
+    "av.audio.frame",
+    "av.container",
+    "av.error",
     "collections.abc",
     "dataclasses",
     "logging",
     "math",
+    "numpy",
+    "numpy.typing",
     "os",
     "pathlib",
     "queue",

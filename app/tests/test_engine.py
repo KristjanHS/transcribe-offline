@@ -1,11 +1,17 @@
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import av
+import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from transcribe_offline import engine
 from transcribe_offline.models import REQUIRED_FILES
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.mark.parametrize(
@@ -80,6 +86,10 @@ class FakeModel:
 SEGMENTS = [Seg(0.0, 5.0, " Tere."), Seg(5.0, 10.0, " Head aega.")]
 
 
+def silence(path: Path) -> NDArray[np.float32]:
+    return np.zeros(engine.SAMPLE_RATE, np.float32)
+
+
 def test_transcribe_file_writes_txt_and_reports_progress(tmp_path: Path) -> None:
     audio = tmp_path / "talk.wav"
     progress: list[float] = []
@@ -91,6 +101,7 @@ def test_transcribe_file_writes_txt_and_reports_progress(tmp_path: Path) -> None
         timestamps=False,
         on_progress=progress.append,
         cancelled=lambda: False,
+        decode=silence,
     )
     assert out == tmp_path / "talk.txt"
     assert out.read_text(encoding="utf-8").splitlines() == ["Tere.", "Head aega."]
@@ -113,5 +124,62 @@ def test_transcribe_file_cancel_removes_partial(tmp_path: Path) -> None:
             timestamps=True,
             on_progress=lambda f: None,
             cancelled=lambda: True,
+            decode=silence,
         )
     assert list(tmp_path.iterdir()) == []
+
+
+def transcribe(audio: Path, on_progress: Callable[[float], None] = lambda f: None) -> Path:
+    return engine.transcribe_file(
+        FakeModel(SEGMENTS),  # pyright: ignore[reportArgumentType]
+        audio,
+        "et",
+        timestamps=False,
+        on_progress=on_progress,
+        cancelled=lambda: False,
+        decode=silence,
+    )
+
+
+def test_transcribe_file_never_overwrites_a_file_that_appears_meanwhile(tmp_path: Path) -> None:
+    taken = tmp_path / "talk.txt"
+
+    def take(fraction: float) -> None:
+        taken.write_text("mine")
+
+    out = transcribe(tmp_path / "talk.wav", on_progress=take)
+    assert out == tmp_path / "talk (2).txt"
+    assert taken.read_text() == "mine"
+
+
+def test_transcribe_file_leaves_a_stale_partial_alone(tmp_path: Path) -> None:
+    stale = tmp_path / "talk.txt.partial"
+    stale.write_text("stale")
+    assert transcribe(tmp_path / "talk.wav") == tmp_path / "talk (2).txt"
+    assert stale.read_text() == "stale"
+
+
+def test_decode_audio_gives_16k_mono_float() -> None:
+    samples = engine.decode_audio(FIXTURES / "en.wav")
+    assert samples.dtype == np.float32 and samples.ndim == 1
+    assert len(samples) > engine.SAMPLE_RATE and 0 < np.abs(samples).max() <= 1
+
+
+def test_decode_audio_rejects_a_codec_outside_the_allow_list(tmp_path: Path) -> None:
+    path = tmp_path / "talk.mkv"
+    with av.open(str(path), "w") as out:
+        stream = out.add_stream("ac3", rate=48000)
+        frame = av.AudioFrame.from_ndarray(np.zeros((1, 48000), np.float32), "fltp", "mono")
+        frame.rate = 48000
+        for packet in [*stream.encode(frame), *stream.encode(None)]:
+            out.mux(packet)
+    with pytest.raises(engine.UnsupportedAudioError, match="codec: ac3"):
+        engine.decode_audio(path)
+
+
+def test_decode_audio_rejects_content_that_probes_as_another_format(tmp_path: Path) -> None:
+    # An ffconcat playlist named .wav: FFmpeg would probe it as "concat" and open the listed file.
+    path = tmp_path / "talk.wav"
+    path.write_text(f"ffconcat version 1.0\nfile '{FIXTURES / 'en.wav'}'\n")
+    with pytest.raises(engine.UnsupportedAudioError, match="format"):
+        engine.decode_audio(path)
