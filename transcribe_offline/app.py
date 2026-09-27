@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import logging
-import os
 import queue
-import sys
 import threading
 import tkinter as tk
 from dataclasses import dataclass
@@ -77,7 +75,6 @@ class App:
         self.cancel = threading.Event()
         self.worker: threading.Thread | None = None
         self.failures: list[str] = []
-        self.last_saved: Path | None = None
         self.closing = False
         self.language = tk.StringVar(value="Estonian")
         self.timestamps = tk.BooleanVar(value=True)
@@ -106,11 +103,7 @@ class App:
         ttk.Label(f, textvariable=self.status).grid(row=4, column=0, columnspan=3, sticky="w")
         self.progress = ttk.Progressbar(f, length=320, maximum=1.0)
         self.progress.grid(row=5, column=0, columnspan=3, sticky="we", pady=4)
-        ttk.Label(f, textvariable=self.saved).grid(row=6, column=0, columnspan=2, sticky="w")
-        self.open_btn = ttk.Button(
-            f, text="Open folder", command=self.open_folder, state="disabled"
-        )
-        self.open_btn.grid(row=6, column=2, sticky="e")
+        ttk.Label(f, textvariable=self.saved).grid(row=6, column=0, columnspan=3, sticky="w")
         root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def choose(self) -> None:
@@ -151,9 +144,7 @@ class App:
             elif ev.kind == "progress":
                 self.progress["value"] = ev.fraction
             elif ev.kind == "done":
-                self.last_saved = Path(ev.text)
                 self.saved.set(f"Saved: {ev.text}")
-                self.open_btn.config(state="normal")
             elif ev.kind == "failed":
                 self.failures.append(ev.text)
             elif ev.kind == "finished":
@@ -174,18 +165,13 @@ class App:
         else:
             self.status.set("Cancelled." if self.cancel.is_set() else "Finished.")
 
-    def open_folder(self) -> None:
-        if self.last_saved is not None and sys.platform == "win32":
-            # The only OS launch in the app (SECURITY.md, "Does").
-            os.startfile(self.last_saved.parent)  # noqa: S606, TID251  # nosec B606
-
     def on_close(self) -> None:
         if self.worker is None:
             self.root.destroy()
         elif not self.closing and messagebox.askyesno("Transcribing", "Cancel and quit?"):
             self.closing = True  # finish() destroys the window once the worker has removed .partial
             self.cancel.set()
-            for btn in (self.choose_btn, self.cancel_btn, self.open_btn):
+            for btn in (self.choose_btn, self.cancel_btn):
                 btn.config(state="disabled")
 
 
