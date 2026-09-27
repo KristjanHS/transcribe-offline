@@ -23,8 +23,8 @@ jobs:
         shell: pwsh
         run: |
           $t0 = (Get-Item "$env:RUNNER_TEMP\install-t0").LastWriteTimeUtc
-          # Windows' own files: registry hives, certificate-revocation cache, pwsh startup cache.
-          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\PowerShell\\StartupProfileData'
+          # Windows' own files: registry hives, certificate-revocation cache, pwsh's own folder.
+          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\PowerShell(\\|$)'
           $new = @(Get-ChildItem $env:USERPROFILE, $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.CreationTimeUtc -gt $t0 -or (!$_.PSIsContainer -and $_.LastWriteTimeUtc -gt $t0) } |
             ForEach-Object FullName | Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
