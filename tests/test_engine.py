@@ -70,8 +70,10 @@ class FakeModel:
     def __init__(self, segments: list[Seg], duration: float = 10.0) -> None:
         self.segments = segments
         self.duration = duration
+        self.kwargs: dict[str, object] = {}
 
     def transcribe(self, audio: str, **kwargs: object) -> tuple[list[Seg], Info]:
+        self.kwargs = kwargs
         return self.segments, Info(self.duration)
 
 
@@ -81,8 +83,9 @@ SEGMENTS = [Seg(0.0, 5.0, " Tere."), Seg(5.0, 10.0, " Head aega.")]
 def test_transcribe_file_writes_txt_and_reports_progress(tmp_path: Path) -> None:
     audio = tmp_path / "talk.wav"
     progress: list[float] = []
+    model = FakeModel(SEGMENTS)
     out = engine.transcribe_file(
-        FakeModel(SEGMENTS),  # pyright: ignore[reportArgumentType]
+        model,  # pyright: ignore[reportArgumentType]
         audio,
         engine.LANGUAGES["Estonian"],
         timestamps=False,
@@ -92,6 +95,12 @@ def test_transcribe_file_writes_txt_and_reports_progress(tmp_path: Path) -> None
     assert out == tmp_path / "talk.txt"
     assert out.read_text(encoding="utf-8").splitlines() == ["Tere.", "Head aega."]
     assert progress == [0.5, 1.0]
+    assert model.kwargs == {
+        "language": "et",
+        "beam_size": 7,
+        "patience": 1.2,
+        "repetition_penalty": 1.05,
+    }
     assert not list(tmp_path.glob("*.partial"))
 
 

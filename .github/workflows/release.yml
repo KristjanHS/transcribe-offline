@@ -19,11 +19,23 @@ jobs:
       - name: install.bat end to end
         shell: cmd
         run: install.bat
+      - name: Nothing written outside the folder
+        shell: pwsh
+        run: |
+          $paths = "$env:USERPROFILE\.local\bin\python*.exe", "HKCU:\Software\Python\Astral",
+            "$env:LOCALAPPDATA\uv", "$env:APPDATA\uv"
+          foreach ($p in $paths) { if (Test-Path $p) { Write-Error "Written outside the folder: $p"; exit 1 } }
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.12.19"
       - run: uv sync --frozen
-      - name: Golden parity (pytest-socket blocks all network)
+      - name: Firewall-block outbound traffic for the app's Python executables
+        shell: pwsh
+        run: |
+          Get-ChildItem .venv, .uv -Recurse -Filter "python*.exe" | ForEach-Object {
+            New-NetFirewallRule -DisplayName "block $($_.FullName)" -Direction Outbound -Action Block -Program $_.FullName
+          }
+      - name: Golden parity (outbound firewall block for the Python executables + pytest-socket)
         run: uv run pytest -m slow
   publish:
     needs: install-and-parity

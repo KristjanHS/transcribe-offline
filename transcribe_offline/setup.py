@@ -6,6 +6,7 @@ Fetches every pinned file into models/<lang>/, verifies its SHA-256, skips files
 from __future__ import annotations
 
 import hashlib
+import http.client
 import logging
 import ssl
 import sys
@@ -86,7 +87,7 @@ def main(root: Path = MODELS_ROOT, fetch: Fetch = open_url) -> int:
     except ChecksumError as exc:
         log.error("Checksum mismatch, file deleted: %s", exc)
         return 1
-    except OSError as exc:
+    except (OSError, http.client.HTTPException) as exc:
         log.error("Download failed: %s", exc)
         return 1
     log.info("Models ready.")

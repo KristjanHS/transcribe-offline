@@ -78,6 +78,7 @@ class App:
         self.worker: threading.Thread | None = None
         self.failures: list[str] = []
         self.last_saved: Path | None = None
+        self.closing = False
         self.language = tk.StringVar(value="Estonian")
         self.timestamps = tk.BooleanVar(value=True)
         self.status = tk.StringVar()
@@ -86,7 +87,8 @@ class App:
         root.title("Transcribe (offline)")
         f = ttk.Frame(root, padding=12)
         f.grid(sticky="nsew")
-        ttk.Button(f, text="Choose audio files…", command=self.choose).grid(row=0, column=0)
+        self.choose_btn = ttk.Button(f, text="Choose audio files…", command=self.choose)
+        self.choose_btn.grid(row=0, column=0)
         self.files_label = ttk.Label(f, text="No files selected")
         self.files_label.grid(row=0, column=1, columnspan=2, sticky="w", padx=8)
         ttk.Label(f, text="Language:").grid(row=1, column=0, sticky="w", pady=4)
@@ -160,6 +162,9 @@ class App:
         self.root.after(POLL_MS, self.poll)
 
     def finish(self) -> None:
+        if self.closing:
+            self.root.destroy()
+            return
         self.worker = None
         self.start_btn.config(state="normal")
         self.cancel_btn.config(state="disabled")
@@ -175,11 +180,13 @@ class App:
             os.startfile(self.last_saved.parent)  # noqa: S606, TID251  # nosec B606
 
     def on_close(self) -> None:
-        if self.worker is not None:
-            if not messagebox.askyesno("Transcribing", "Cancel and quit?"):
-                return
+        if self.worker is None:
+            self.root.destroy()
+        elif not self.closing and messagebox.askyesno("Transcribing", "Cancel and quit?"):
+            self.closing = True  # finish() destroys the window once the worker has removed .partial
             self.cancel.set()
-        self.root.destroy()
+            for btn in (self.choose_btn, self.cancel_btn, self.open_btn):
+                btn.config(state="disabled")
 
 
 def main() -> None:
