@@ -9,15 +9,12 @@ under 500 lines of Python in `transcribe_offline/` plus two `.bat` files, writte
 - Writes `<name>.txt` beside each one (`<name> (2).txt` if that exists), via a transient
   `<name>.txt.partial` beside it that is renamed on success and deleted on cancel or failure.
 - Writes `logs\app.log` inside the app folder.
-- Opens Explorer on the output folder via `os.startfile`, only when "Open folder" is clicked
-  (`transcribe_offline/app.py`, the one line carrying `noqa: ... TID251`).
 
 ## What it never does
 
 No network access at runtime, no telemetry, no auto-update, no admin rights, no registry writes by the
 app itself (the Windows file dialog records recent folders, as for any app), no services or scheduled
-tasks, no child processes at runtime (other than that one Explorer call), and no writes outside its
-folder except the transcripts.
+tasks, no child processes at runtime, and no writes outside its folder except the transcripts.
 
 ## Honest scope of the import ban
 

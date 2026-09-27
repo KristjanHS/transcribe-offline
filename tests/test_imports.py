@@ -16,7 +16,6 @@ ALLOWED = {
     "os",
     "pathlib",
     "queue",
-    "sys",
     "threading",
     "tkinter",
     "typing",
