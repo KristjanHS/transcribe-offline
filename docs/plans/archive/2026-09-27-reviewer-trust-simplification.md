@@ -1,6 +1,6 @@
 # Reviewer-trust simplification
 
-**Status:** READY — Stage 1 next; decisions ruled
+**Status:** ✅ SHIPPED — Windows `workflow_dispatch` run owed (validates Stage 4.6)
 **Date:** 2026-09-27
 
 Goal: shrink what a security reviewer must read or take on trust. Scope: every tracked file + the locked runtime wheel set. User ruling (2026-09-27): stt-faster output parity is no longer a constraint.
