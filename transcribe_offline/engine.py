@@ -95,7 +95,7 @@ def transcribe_file(
         str(audio), language=lang.code, beam_size=7, patience=1.2, repetition_penalty=1.05
     )
     try:
-        # Platform newline (CRLF on Windows), matching stt-faster's output.
+        # Platform newline (CRLF on Windows).
         with open(partial, "w", encoding="utf-8") as out:
             for seg in segments:
                 out.write(format_line(seg.start, seg.end, seg.text, timestamps) + "\n")

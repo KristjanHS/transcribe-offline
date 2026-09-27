@@ -23,5 +23,5 @@ Known limit: proxies that require NTLM authentication may block the download.
 
 - `uv sync` · `uv run python -m transcribe_offline` (runs on Linux too; needs `models/`)
 - Models: `uv run python -m transcribe_offline.setup`
-- Tests: `uv run pytest` (offline unit tests) · `uv run pytest -m slow` (golden parity, needs `models/`)
+- Tests: `uv run pytest` (offline unit tests) · `uv run pytest -m slow` (real-model smoke test, needs `models/`)
 - Lint/types: `uv run ruff check . && uv run ruff format --check . && uv run pyright`
