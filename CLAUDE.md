@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Minimal offline speech-to-text GUI (Estonian + English, CPU, faster-whisper). The codebase is kept deliberately small so security reviewers can read all of it. Design: `docs/plans/2026-09-27-transcribe-offline-minimal-app-design.md`.
+Minimal offline speech-to-text GUI (Estonian + English, CPU, faster-whisper). The codebase is kept deliberately small so security reviewers can read all of it. Design: `docs/plans/archive/2026-09-27-transcribe-offline-minimal-app-design.md`.
 
 ## Invariants (a change that breaks one needs an explicit decision, not a workaround)
 
