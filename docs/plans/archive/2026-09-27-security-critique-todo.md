@@ -1,6 +1,6 @@
 # Security architecture critique — TODO (needs fixing)
 
-Status: **open** · Date: 2026-09-27 · Scope: everything shipped in the release zip (`install.bat`,
+Status: **✅ SHIPPED** (S8.2 = user repo settings) · Date: 2026-09-27 · Scope: everything shipped in the release zip (`install.bat`,
 `Transcribe.bat`, `app/`) plus the CI/release pipeline that produces it.
 Method: `security-best-practices` + `security-reviewer` skills, automated scans, and a manual read of
 all ~490 lines of app code, both `.bat` files, both workflows, `SECURITY.md`, `README.md`.
@@ -70,10 +70,9 @@ repo-settings steps.
   SECURITY.md.
 - Stage 5: full verification and code review.
 
-**Progress:** Stages 1 (`45a8d5a`), 2 (`87027d8`) and 3 are done. S10.5: huggingface-hub stays, as
-`faster_whisper/utils.py:7` imports it at top level. Stage 3's Windows paths (uv.exe re-hash,
-guarded smoke, outside-folder check) are unverified until release.yml runs. **Next: Stage 4.**
-Stage 5's review covers `b92ed3d..HEAD`.
+**Progress:** all stages done: 1 `45a8d5a`, 2 `87027d8`, 3 `1137856`, 4 `2eaa255`, 5 review fixes
+`1deb918` + `12471ae` (I1 ruling: Tcl hiding removed, `.call`/`.eval` banned instead). Windows paths
+stay unverified until the first release.yml run.
 
 ---
 
