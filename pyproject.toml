@@ -1,0 +1,65 @@
+[project]
+name = "transcribe-offline"
+version = "0.1.0"
+description = "Minimal offline speech-to-text GUI (Estonian + English, CPU, faster-whisper)."
+readme = "README.md"
+license = "MIT"
+requires-python = "==3.12.*"
+dependencies = ["faster-whisper==1.2.1"]
+
+[dependency-groups]
+dev = ["bandit", "pip-audit", "pyright", "pytest", "pytest-socket", "ruff"]
+
+[tool.uv]
+# Never build the project: a build backend is not hash-pinned by uv.lock.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "T20", "TID"]
+
+[tool.ruff.lint.per-file-ignores]
+"transcribe_offline/setup.py" = ["TID251"]
+"tests/**" = ["S101"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"socket".msg = "No network at runtime; only transcribe_offline/setup.py may download."
+"urllib".msg = "No network at runtime; only transcribe_offline/setup.py may download."
+"http".msg = "No network at runtime; only transcribe_offline/setup.py may download."
+"huggingface_hub".msg = "No network at runtime; models load from a local path."
+"subprocess".msg = "No child processes at runtime."
+"ctypes".msg = "No native calls."
+"os.system".msg = "No child processes at runtime."
+"os.popen".msg = "No child processes at runtime."
+"os.startfile".msg = "Only app.py's Open folder may launch Explorer (inline noqa)."
+"os.spawnl".msg = "No child processes at runtime."
+"os.spawnle".msg = "No child processes at runtime."
+"os.spawnlp".msg = "No child processes at runtime."
+"os.spawnlpe".msg = "No child processes at runtime."
+"os.spawnv".msg = "No child processes at runtime."
+"os.spawnve".msg = "No child processes at runtime."
+"os.spawnvp".msg = "No child processes at runtime."
+"os.spawnvpe".msg = "No child processes at runtime."
+"os.execl".msg = "No child processes at runtime."
+"os.execle".msg = "No child processes at runtime."
+"os.execlp".msg = "No child processes at runtime."
+"os.execlpe".msg = "No child processes at runtime."
+"os.execv".msg = "No child processes at runtime."
+"os.execve".msg = "No child processes at runtime."
+"os.execvp".msg = "No child processes at runtime."
+"os.execvpe".msg = "No child processes at runtime."
+
+[tool.pyright]
+include = ["transcribe_offline", "tests"]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "--disable-socket -m 'not slow'"
+markers = ["slow: needs models/ (golden parity)"]

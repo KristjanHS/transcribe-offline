@@ -1,0 +1,7 @@
+.venv/
+.uv/
+models/
+logs/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
