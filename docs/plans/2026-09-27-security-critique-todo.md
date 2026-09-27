@@ -64,7 +64,7 @@ repo-settings steps.
   (`guard.py` audit hook).
 - Stage 3 (installer/CI): S7.1, S7.2, S7.3, S3.2, S9.1 (installed-env smoke test with the guard, then
   the outside-folder check), S9.2, S9.3, S10.2, S10.3, S10.5.
-- Stage 4 (docs): S1.x, S2.2, S4.3, S5.3, S6.x, S7.4, S8.1, S8.3, S10.1, S10.4; README and
+- Stage 4 (docs): fix SECURITY.md:4 "under 500 lines" (app code is 651 after Stages 1-2); S1.x, S2.2, S4.3, S5.3, S6.x, S7.4, S8.1, S8.3, S10.1, S10.4; README and
   SECURITY.md.
 - Stage 5: full verification and code review.
 
