@@ -11,12 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from transcribe_offline import engine
+from transcribe_offline import APP_ROOT, engine
 from transcribe_offline.models import MODELS_ROOT
 
 log = logging.getLogger(__name__)
 
-LOG_FILE = Path("logs") / "app.log"
+LOG_FILE = APP_ROOT / "logs" / "app.log"
 POLL_MS = 100
 ETA_MIN_SECONDS = 5.0  # below this the rate is too noisy to show
 
@@ -61,7 +61,7 @@ def run_job(
         except engine.Cancelled:
             break
         except Exception as exc:
-            log.exception("Transcription failed: %s", audio)
+            log.exception("Transcription failed: %s", audio.name)  # name only: paths are personal
             events.put(Event("failed", i, f"{audio.name}: {exc}"))
         else:
             events.put(Event("done", i, str(txt)))

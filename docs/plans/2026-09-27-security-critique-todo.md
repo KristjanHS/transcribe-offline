@@ -49,6 +49,25 @@ that is the recommended fix.
 | `trivy fs app` (vuln/secret/misconfig) | `uv.lock`: 0 vulnerabilities |
 | `gitleaks detect` | 2 hits: `generic-api-key` in `models.py` (commit `ee01edf`). **False positives:** these are the SHA-256 pins. See S10.4. |
 
+## Execution contract (qimpag round, 2026-09-27)
+
+Rulings: **all 28 items**. **S2.1 = formats + codecs**: our own decode, `protocol_whitelist=file`,
+~8 demuxers, and an explicit audio-codec allow-list, so an odd-codec mp4/mkv gets a clear error.
+**S4.2 = network + processes + write-path guard.** `ctypes.dlopen` is *not* blocked, because PyAV's
+Windows wheels probably preload their DLLs through ctypes; our code is still barred from ctypes by
+TID251. **S3.2 = rename the step, no firewall**, keeping the earlier ruling that removed it. S2.2 is
+a doc note only. S6.3 logs the file name. S8.2 and the S9.3 protection settings go to the user as
+repo-settings steps.
+
+- Stage 1 (engine): S2.1, S3.1, S3.3, S5.1, S5.2, S6.3.
+- Stage 2 (runtime confinement): S4.1 (hide Tcl `exec`/`socket`, plus an AST check), S4.2
+  (`guard.py` audit hook).
+- Stage 3 (installer/CI): S7.1, S7.2, S7.3, S3.2, S9.1 (installed-env smoke test with the guard, then
+  the outside-folder check), S9.2, S9.3, S10.2, S10.3, S10.5.
+- Stage 4 (docs): S1.x, S2.2, S4.3, S5.3, S6.x, S7.4, S8.1, S8.3, S10.1, S10.4; README and
+  SECURITY.md.
+- Stage 5: full verification and code review.
+
 ---
 
 ## Angle 1 — Threat model & assurance claims

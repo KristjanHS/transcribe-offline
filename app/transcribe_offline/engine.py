@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 import math
-import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from transcribe_offline.models import REQUIRED_FILES
 
 if TYPE_CHECKING:
+    import av.container
+    import numpy as np
+    from av.audio.frame import AudioFrame
     from faster_whisper import WhisperModel
+    from numpy.typing import NDArray
 
 AUDIO_EXTENSIONS = (".wav", ".mp3", ".m4a", ".flac", ".ogg", ".wma", ".aac", ".mp4", ".mkv")
 
+# FFmpeg picks a demuxer by probing the content, not by the extension; only these may open a file.
+FORMATS = "wav,mp3,mov,flac,ogg,asf,aac,matroska"
+CODECS = ("aac", "alac", "flac", "mp3", "opus", "vorbis", "wmav1", "wmav2", "wmapro")  # + pcm_*
+SAMPLE_RATE = 16000
 
 LANGUAGES = {"Estonian": "et", "English": "en"}  # name -> language code = folder under models/
 
@@ -25,6 +32,10 @@ class Cancelled(Exception):
 
 class ModelMissingError(Exception):
     """A required model file is absent; faster-whisper would otherwise try the network."""
+
+
+class UnsupportedAudioError(Exception):
+    """The file's container or audio codec is not in FORMATS / CODECS."""
 
 
 def is_audio(path: Path) -> bool:
@@ -40,12 +51,53 @@ def load_model(models_root: Path, language: str) -> WhisperModel:
     missing = missing_files(path)
     if missing:
         raise ModelMissingError(f"Missing in {path}: {', '.join(missing)}. Run install.bat.")
-    # Before faster_whisper loads huggingface_hub: never contact the Hub at runtime.
-    os.environ["HF_HUB_OFFLINE"] = "1"
-    os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
     from faster_whisper import WhisperModel  # deferred: heavy import, only needed once a job starts
 
     return WhisperModel(str(path), device="cpu", compute_type="int8")
+
+
+def _frames(container: av.container.InputContainer) -> Iterator[AudioFrame]:
+    """First audio stream's frames, skipping corrupt ones (as faster-whisper's own decoder does)."""
+    import av.error
+
+    frames = container.decode(audio=0)
+    while True:
+        try:
+            yield next(frames)
+        except StopIteration:
+            return
+        except av.error.InvalidDataError:
+            continue
+
+
+def decode_audio(path: Path) -> NDArray[np.float32]:
+    """16 kHz mono float32 samples, decoded by FFmpeg restricted to local files and FORMATS/CODECS.
+
+    Replaces faster-whisper's decode_audio, which lets FFmpeg open any format and follow any URL.
+    """
+    import av  # deferred like faster_whisper
+    import av.error
+    import numpy as np
+
+    options = {"protocol_whitelist": "file", "format_whitelist": FORMATS}
+    try:
+        container = av.open(str(path), options=options, metadata_errors="ignore")
+    except av.error.ArgumentError as exc:  # EINVAL: no allowed demuxer recognises the content
+        raise UnsupportedAudioError(f"not a supported audio format ({exc})") from exc
+    with container:
+        if not container.streams.audio:
+            raise UnsupportedAudioError("no audio stream")
+        codec = container.streams.audio[0].codec_context.codec.canonical_name
+        if codec not in CODECS and not codec.startswith("pcm_"):
+            raise UnsupportedAudioError(f"unsupported audio codec: {codec}")
+        resampler = av.AudioResampler(format="s16", layout="mono", rate=SAMPLE_RATE)
+        chunks = [
+            out.to_ndarray().reshape(-1)
+            for frame in [*_frames(container), None]
+            for out in resampler.resample(frame)
+        ]
+    samples = np.concatenate(chunks) if chunks else np.zeros(0, np.int16)
+    return samples.astype(np.float32) / 32768.0
 
 
 def fmt_time(seconds: float) -> str:
@@ -63,10 +115,14 @@ def format_line(start: float, end: float, text: str, timestamps: bool) -> str:
     return f"[{fmt_time(start)} --> {fmt_time(end)}] {text}" if timestamps else text
 
 
+def partial_of(dest: Path) -> Path:
+    return dest.with_name(dest.name + ".partial")
+
+
 def unique_destination(audio: Path) -> Path:
     candidate = audio.with_suffix(".txt")
     n = 2
-    while candidate.exists():
+    while candidate.exists() or partial_of(candidate).exists():
         candidate = audio.with_name(f"{audio.stem} ({n}).txt")
         n += 1
     return candidate
@@ -80,22 +136,26 @@ def transcribe_file(
     timestamps: bool,
     on_progress: Callable[[float], None],
     cancelled: Callable[[], bool],
+    decode: Callable[[Path], NDArray[np.float32]] = decode_audio,
 ) -> Path:
-    dest = unique_destination(audio)
-    partial = dest.with_name(dest.name + ".partial")
     segments, info = model.transcribe(
-        str(audio), language=language, beam_size=7, patience=1.2, repetition_penalty=1.05
+        decode(audio), language=language, beam_size=7, patience=1.2, repetition_penalty=1.05
     )
+    dest = unique_destination(audio)
+    partial = partial_of(dest)
+    # "x": fails rather than truncate an existing file or follow a link planted at that name.
+    out = open(partial, "x", encoding="utf-8")  # closed by the with below
     try:
-        # Platform newline (CRLF on Windows).
-        with open(partial, "w", encoding="utf-8") as out:
+        with out:  # platform newline (CRLF on Windows)
             for seg in segments:
                 out.write(format_line(seg.start, seg.end, seg.text, timestamps) + "\n")
                 if cancelled():
                     raise Cancelled
                 if info.duration > 0:
                     on_progress(min(1.0, seg.end / info.duration))
-        partial.replace(dest)
+        if dest.exists():  # taken while transcribing: keep both, never overwrite
+            dest = unique_destination(audio)
+        partial.rename(dest)  # on Windows rename fails rather than overwrite
     except BaseException:
         partial.unlink(missing_ok=True)
         raise
