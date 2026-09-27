@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+import time
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,7 @@ log = logging.getLogger(__name__)
 
 LOG_FILE = Path("logs") / "app.log"
 POLL_MS = 100
+ETA_MIN_SECONDS = 5.0  # below this the rate is too noisy to show
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,22 @@ def run_job(
     events.put(Event("finished"))
 
 
+def seconds_left(fraction: float, elapsed: float) -> float | None:
+    """Seconds left in the current file at its rate so far; None until the rate is meaningful."""
+    if fraction <= 0 or elapsed < ETA_MIN_SECONDS:
+        return None
+    return elapsed * (1 - fraction) / fraction
+
+
+def format_eta(seconds: float) -> str:
+    minutes = round(seconds / 60)
+    if minutes < 1:
+        return "<1 min left"
+    if minutes < 60:
+        return f"~{minutes} min left"
+    return f"~{minutes // 60} h {minutes % 60} min left"
+
+
 class App:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -75,6 +93,9 @@ class App:
         self.worker: threading.Thread | None = None
         self.failures: list[str] = []
         self.closing = False
+        self.file_line = ""
+        self.file_start = 0.0
+        self.result_dir: Path | None = None
         self.language = tk.StringVar(value="Estonian")
         self.timestamps = tk.BooleanVar(value=True)
         self.status = tk.StringVar()
@@ -99,6 +120,10 @@ class App:
         self.start_btn.grid(row=3, column=0, pady=4, sticky="w")
         self.cancel_btn = ttk.Button(f, text="Cancel", command=self.cancel.set, state="disabled")
         self.cancel_btn.grid(row=3, column=1, sticky="w")
+        self.folder_btn = ttk.Button(
+            f, text="Show result folder", command=self.show_folder, state="disabled"
+        )
+        self.folder_btn.grid(row=3, column=2, sticky="w")
         ttk.Label(f, textvariable=self.status).grid(row=4, column=0, columnspan=3, sticky="w")
         self.progress = ttk.Progressbar(f, length=320, maximum=1.0)
         self.progress.grid(row=5, column=0, columnspan=3, sticky="we", pady=4)
@@ -139,11 +164,18 @@ class App:
                 break
             if ev.kind == "started":
                 self.progress["value"] = 0
-                self.status.set(f"File {ev.index + 1} of {len(self.files)}: {ev.text}")
+                self.file_line = f"File {ev.index + 1} of {len(self.files)}: {ev.text}"
+                self.file_start = time.monotonic()
+                self.status.set(self.file_line)
             elif ev.kind == "progress":
                 self.progress["value"] = ev.fraction
+                left = seconds_left(ev.fraction, time.monotonic() - self.file_start)
+                eta = "" if left is None else f" · {format_eta(left)}"
+                self.status.set(self.file_line + eta)
             elif ev.kind == "done":
                 self.saved.set(f"Saved: {ev.text}")
+                self.result_dir = Path(ev.text).parent
+                self.folder_btn.config(state="normal")
             elif ev.kind == "failed":
                 self.failures.append(ev.text)
             elif ev.kind == "finished":
@@ -164,13 +196,22 @@ class App:
         else:
             self.status.set("Cancelled." if self.cancel.is_set() else "Finished.")
 
+    def show_folder(self) -> None:
+        # Windows' own file dialog, opened at the folder: shows the transcripts without starting
+        # another program (no Explorer launch, see SECURITY.md). The picked file is ignored.
+        filedialog.askopenfilename(
+            title="Result folder",
+            initialdir=self.result_dir,
+            filetypes=[("Transcripts", "*.txt"), ("All files", "*.*")],
+        )
+
     def on_close(self) -> None:
         if self.worker is None:
             self.root.destroy()
         elif not self.closing and messagebox.askyesno("Transcribing", "Cancel and quit?"):
             self.closing = True  # finish() destroys the window once the worker has removed .partial
             self.cancel.set()
-            for btn in (self.choose_btn, self.cancel_btn):
+            for btn in (self.choose_btn, self.cancel_btn, self.folder_btn):
                 btn.config(state="disabled")
 
 

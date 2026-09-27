@@ -17,6 +17,7 @@ ALLOWED = {
     "pathlib",
     "queue",
     "threading",
+    "time",
     "tkinter",
     "typing",
     "faster_whisper",
