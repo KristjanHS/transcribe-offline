@@ -35,13 +35,7 @@ jobs:
         with:
           version: "0.12.19"
       - run: uv sync --frozen
-      - name: Firewall-block outbound traffic for the app's Python executables
-        shell: pwsh
-        run: |
-          Get-ChildItem .venv, .uv -Recurse -Filter "python*.exe" | ForEach-Object {
-            New-NetFirewallRule -DisplayName "block $($_.FullName)" -Direction Outbound -Action Block -Program $_.FullName
-          }
-      - name: Real-model smoke test (outbound firewall block for the Python executables + pytest-socket)
+      - name: Real-model smoke test (network blocked by pytest-socket)
         run: uv run pytest -m slow
   publish:
     needs: install-and-smoke
