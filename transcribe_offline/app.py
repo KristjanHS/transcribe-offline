@@ -7,7 +7,6 @@ import queue
 import threading
 import tkinter as tk
 from dataclasses import dataclass
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -177,7 +176,7 @@ class App:
 
 def main() -> None:
     LOG_FILE.parent.mkdir(exist_ok=True)
-    handler = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=2, encoding="utf-8")
+    handler = logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8")  # overwritten each launch
     logging.basicConfig(
         level=logging.INFO,
         handlers=[handler],

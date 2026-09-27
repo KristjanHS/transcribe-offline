@@ -11,7 +11,6 @@ ALLOWED = {
     "collections.abc",
     "dataclasses",
     "logging",
-    "logging.handlers",
     "math",
     "os",
     "pathlib",
