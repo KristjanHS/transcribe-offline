@@ -79,7 +79,7 @@ Stage 5's review covers `b92ed3d..HEAD`.
 
 ## Angle 1 — Threat model & assurance claims
 
-- [ ] **S1.1 (Medium) No written threat model; the claims outrun what is enforced.**
+- [x] **S1.1 (Medium) No written threat model; the claims outrun what is enforced.**
   `SECURITY.md:13-17` states absolutes ("no network access at runtime", "no child processes at
   runtime", "no writes outside its folder"). Only some of them are enforced, and only statically.
   Nothing names the assets (audio, transcripts), the actors (a malicious audio file, whoever
@@ -89,7 +89,7 @@ Stage 5's review covers `b92ed3d..HEAD`.
   verified (static / CI / manual / *not verified*). Rows that come out *not verified* feed the
   items below.
   **Cost:** ~15 doc lines.
-- [ ] **S1.2 (Low) Soften or qualify the absolutes until they are tested.** Say "our code never …"
+- [x] **S1.2 (Low) Soften or qualify the absolutes until they are tested.** Say "our code never …"
   for what the ban covers. For native deps (FFmpeg, CTranslate2, tokenizers), Tcl and Windows
   itself (WER, the file-dialog MRU), point to S1.1's table.
   **Cost:** wording only.
@@ -112,14 +112,14 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   **Cost:** ~20 lines, plus `av` added to the `test_imports.py` allow-list.
   **Falsifier:** a test that feeds a `.wav`-named file with SDP, ffconcat or DASH content and
   asserts it is rejected. Show that it fails first without the whitelist.
-- [ ] **S2.2 (Low) Resource exhaustion.** faster-whisper decodes the whole file into float32
+- [x] **S2.2 (Low) Resource exhaustion.** faster-whisper decodes the whole file into float32
   memory: about 230 MB per hour of audio. A crafted file or a very long recording can exhaust RAM
   or run for hours, and there is no limit on duration or size. The impact is only a local
   self-DoS.
   **Fix:** refuse above a documented duration, for example 12 h (from `info.duration` or the
   container), or document the limit.
   **Cost:** ~3 lines, or 1 doc line.
-- [ ] **S2.3 (Info) No dedicated way to track FFmpeg CVEs.** See S10.1.
+- [x] **S2.3 (Info) No dedicated way to track FFmpeg CVEs.** See S10.1.
 
 ## Angle 3 — Runtime network isolation (Invariant 1)
 
@@ -171,7 +171,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   **Fix:** a ~15-line hook installed first thing in `__main__.py`, plus a unit test showing that it
   raises. Add `sys` to the allow-list.
   **Cost:** ~15 lines, and it is the highest-maturity option.
-- [ ] **S4.3 (Low) No OS-level confinement.** The app runs at medium integrity with the user's full
+- [x] **S4.3 (Low) No OS-level confinement.** The app runs at medium integrity with the user's full
   file-system and network rights. A memory-corruption bug in FFmpeg (S2.1) gets everything the
   user has. AppContainer or a low-integrity child process would need admin rights or process
   spawning, which conflicts with the "no child processes" invariant.
@@ -201,7 +201,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   folder.
   **Fix:** anchor both to `Path(__file__).resolve().parents[1]`.
   **Cost:** 2 lines.
-- [ ] **S5.3 (Low) A hard kill leaves `.partial` files.** `except BaseException` does not run on
+- [x] **S5.3 (Low) A hard kill leaves `.partial` files.** `except BaseException` does not run on
   power loss, task-kill or a native crash in FFmpeg or CTranslate2. A partial transcript stays
   beside the audio.
   **Fix:** document it in `SECURITY.md` "What it does". Optionally sweep for stale
@@ -210,7 +210,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
 
 ## Angle 6 — Data confidentiality & privacy
 
-- [ ] **S6.1 (Medium) Transcripts can be uploaded by the OS, which contradicts README's "Nothing is
+- [x] **S6.1 (Medium) Transcripts can be uploaded by the OS, which contradicts README's "Nothing is
   uploaded".** `README.md:8` claims nothing is uploaded, and `README.md:16` warns against OneDrive
   only for the install folder. The transcript lands **beside the audio**
   (`engine.py:67`). If the audio is on Desktop or Documents, which OneDrive usually syncs, or on a
@@ -219,7 +219,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   **Fix:** one README and SECURITY.md sentence: "the `.txt` goes where the audio is, including
   cloud-synced folders". Optionally make "Save to…" the first-run default. That would be a feature,
   so it needs a decision under Invariant 4.
-- [ ] **S6.2 (Medium) Windows Error Reporting may upload crash dumps holding audio and transcript
+- [x] **S6.2 (Medium) Windows Error Reporting may upload crash dumps holding audio and transcript
   data.** A native crash in FFmpeg, CTranslate2 or Tcl in `pythonw.exe` can produce a WER report,
   and depending on policy it may include heap memory sent to Microsoft. This is runtime egress
   outside the app's control and is not mentioned in `SECURITY.md`. Excluding the app per user
@@ -233,10 +233,10 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   **Fix:** log `audio.name` or an index instead of the full path, or state in `SECURITY.md` that the
   log holds file paths.
   **Cost:** 1 line.
-- [ ] **S6.4 (Info) Recent-folder MRU.** `show_folder` (`app.py:199-206`) and `choose` add entries
+- [x] **S6.4 (Info) Recent-folder MRU.** `show_folder` (`app.py:199-206`) and `choose` add entries
   to the Windows common-dialog MRU in HKCU. This is already disclosed (`SECURITY.md:16`); keep the
   disclosure.
-- [ ] **S6.5 (Info) Transcripts inherit the folder's ACL.** This is by design. Mention it together
+- [x] **S6.5 (Info) Transcripts inherit the folder's ACL.** This is by design. Mention it together
   with S6.1.
 
 ## Angle 7 — Install-time supply chain & integrity at rest
@@ -270,13 +270,13 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   **Fix:** `set "UV_PYTHON_DOWNLOADS_JSON_URL="` (and the others) near `install.bat:14`, or list
   the assumption in `SECURITY.md`.
   **Cost:** ~4 lines.
-- [ ] **S7.4 (Low) CPython 3.12.14 and FFmpeg are frozen until the next release.** There is no
+- [x] **S7.4 (Low) CPython 3.12.14 and FFmpeg are frozen until the next release.** There is no
   update path except a new zip, and old installs never learn that they are stale.
   **Fix:** document the "security updates = new release" policy and a cadence (see S10.2).
 
 ## Angle 8 — Release & distribution integrity (end-user trust root)
 
-- [ ] **S8.1 (Medium) Users are never told to verify the zip.** The trust chain in
+- [x] **S8.1 (Medium) Users are never told to verify the zip.** The trust chain in
   `SECURITY.md:56` starts at the uv hash inside `install.bat`, which comes **from the zip**.
   README install step 1 (`README.md:14-15`) is "download … extract". `SHA256SUMS` sits in the same
   release, so it only catches corruption, not tampering. The provenance attestation made in
@@ -293,7 +293,7 @@ The attacker's easiest route in is a crafted audio file that the user is persuad
   restricts `v*` creation and deletion to the maintainer. Add a branch ruleset on `main`
   (no force-push, no deletion). Require 2FA with a hardware key. Optionally `git tag -s` in the
   Makefile, and put the maintainer's signing key fingerprint in `SECURITY.md`.
-- [ ] **S8.3 (Low) Unsigned `.bat` files and SmartScreen.** Explorer carries the Mark-of-the-Web
+- [x] **S8.3 (Low) Unsigned `.bat` files and SmartScreen.** Explorer carries the Mark-of-the-Web
   onto the extracted `.bat` files, and the unsigned Python binaries in a user-writable folder are
   what AppLocker and WDAC default rules block. Enterprise security teams will ask.
   **Fix:** document the expected SmartScreen prompt. Publish the SHA-256 of each executable that
@@ -329,7 +329,7 @@ cache re-verified by `setup.py`'s hashes, so cache poisoning cannot land an unve
 
 ## Angle 10 — Vulnerability & dependency lifecycle
 
-- [ ] **S10.1 (Medium) `pip-audit` cannot see the native components that carry the risk.**
+- [x] **S10.1 (Medium) `pip-audit` cannot see the native components that carry the risk.**
   `ci.yml:32-36` audits PyPI advisories. Bundled FFmpeg 8.1.2 (in `av`), CTranslate2's C++,
   tokenizers' Rust, python-build-standalone CPython 3.12.14 and `uv.exe` are tracked under their
   own CVE feeds, not as PyPI advisories. `trivy fs` also reported 0 against `uv.lock` alone.
@@ -346,7 +346,7 @@ cache re-verified by `setup.py`'s hashes, so cache poisoning cannot land an unve
   **Fix:** in `publish`, `uv export --frozen --no-dev --format cyclonedx1.5 > sbom.cdx.json` (or
   generate it with `cyclonedx-py` from `requirements.txt`), attach it to the release and attest it.
   **Cost:** ~3 YAML lines.
-- [ ] **S10.4 (Info) gitleaks false positives.** The SHA-256 pins in `models.py:38-58` match
+- [x] **S10.4 (Info) gitleaks false positives.** The SHA-256 pins in `models.py:38-58` match
   `generic-api-key`, so a future secret-scan gate would fail on them.
   **Fix:** add a `.gitleaks.toml` allowlist for `models.py` hex-64 values when a gitleaks gate is
   added. Not before, per Invariant 4.

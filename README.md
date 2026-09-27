@@ -5,8 +5,8 @@
 
 **[⬇ Download the latest release (Windows)](https://github.com/KristjanHS/transcribe-offline/releases/latest)** · [All releases](https://github.com/KristjanHS/transcribe-offline/releases)
 
-Transcribe Estonian or English audio to text on your own computer. Nothing is uploaded; after
-installation the app works with the network unplugged. See [SECURITY.md](SECURITY.md) for exactly what it does.
+Transcribe Estonian or English audio to text on your own computer. The app uploads nothing; after
+installation it works with the network unplugged. See [SECURITY.md](SECURITY.md) for exactly what it does.
 _(Developers: jump to [Development](#development).)_
 
 ## Install (Windows 10 1803+ / 11, no admin rights)
@@ -14,17 +14,23 @@ _(Developers: jump to [Development](#development).)_
 1. Open the [latest release](https://github.com/KristjanHS/transcribe-offline/releases/latest),
    download `transcribe-offline-vX.Y.Z.zip` under **Assets** and extract it to any folder.
    Don't use a OneDrive-synced folder (Desktop and Documents often are).
+   Optional, before extracting: check that the zip is the one GitHub built with
+   `gh attestation verify transcribe-offline-vX.Y.Z.zip -R KristjanHS/transcribe-offline`
+   (without `gh`: compare PowerShell `Get-FileHash transcribe-offline-vX.Y.Z.zip` with `SHA256SUMS`).
 2. Double-click `install.bat`. It downloads about 3.5 GB (uv, Python, libraries, two speech models),
-   verifying every file against a pinned hash. If it stops, run it again to continue; files already
-   verified are skipped.
+   verifying every file against a pinned hash. If it stops, run it again to continue; it re-hashes
+   uv and the models and downloads only what is missing or does not match.
+   Windows may warn that the `.bat` files are unsigned; that is expected.
 3. Start `Transcribe.bat` in the folder (right-click → Send to → Desktop for a shortcut).
 
-Pick audio files, choose the language, press Start. Each `.txt` is saved beside its audio file.
+Pick audio files, choose the language, press Start. Each `.txt` is saved beside its audio file, so in a
+OneDrive-synced or shared folder it is synced or shared too.
 
 Known limit: proxies that require NTLM authentication may block the download.
 
-**Upgrade:** extract the new zip to a new folder, optionally copy the old `app\models\` folder
-into the new `app\`, run `install.bat`. **Uninstall:** delete the folder.
+**Upgrade:** the app never updates itself; security fixes come as a new release. Extract the
+new zip to a new folder, optionally copy the old `app\models\` folder into the new `app\`, run
+`install.bat`. **Uninstall:** delete the folder.
 
 ## License
 
