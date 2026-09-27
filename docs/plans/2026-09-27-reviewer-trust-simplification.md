@@ -1,6 +1,6 @@
 # Reviewer-trust simplification
 
-**Status:** READY — Stage 1 next
+**Status:** READY — Stage 1 next; decisions ruled
 **Date:** 2026-09-27
 
 Goal: shrink what a security reviewer must read or take on trust. Scope: every tracked file + the locked runtime wheel set. User ruling (2026-09-27): stt-faster output parity is no longer a constraint.
@@ -72,51 +72,26 @@ Goal: shrink what a security reviewer must read or take on trust. Scope: every t
 - Risk: none behavioural; pyright catches missed call sites.
 - Verify: `uv run pytest`, `uv run pytest -m slow`, ruff, pyright.
 
-## [USER DECISION] D1 — Desktop shortcut (install.bat:43-44, uninstall.bat, invariant 3)
+Rulings (2026-09-27 qimpag round): D1 B, D2 B, D3 B, D4 A (keep tuned kwargs), D5 A (keep bandit), D6 C, A1 run probe, A2 write blind.
 
-- A: keep (status quo). PowerShell + COM in install.bat and uninstall.bat; the only write outside the folder besides transcripts.
-- B: drop it. install.bat loses the PowerShell line and `APP_DIR` (install.bat:11); delete uninstall.bat (uninstall = delete the folder); README step 3 → "start `Transcribe.bat` (right-click → Send to → Desktop for a shortcut)". SECURITY.md "What it never does" / install.bat:5 / CLAUDE.md invariant 3 lose the shortcut exception → "writes nothing outside its folder except transcripts". Saves 1 file, ~8 lines, the only PowerShell/COM use. Cost: one manual step for non-IT users. Verify: release.yml `workflow_dispatch` + reading.
+## Stage 4.1 — D1: drop the Desktop shortcut
+- Focus: `install.bat:5,11,43-47`, delete `uninstall.bat`, README step 3, SECURITY.md "What it never does", CLAUDE.md invariant 3, release.yml refs.
+- install.bat loses the PowerShell line + `APP_DIR`; README → "start `Transcribe.bat` (right-click → Send to → Desktop for a shortcut)"; invariant → "writes nothing outside its folder except transcripts".
 
-## [USER DECISION] D2 — "Open folder" button (app.py:110-113,177-180; pyproject.toml:37)
+## Stage 4.2 — D2: remove the "Open folder" button
+- Focus: `app.py:110-113,177-180` (+ `last_saved`, `sys` import if unused), `pyproject.toml:37` banned-api message, SECURITY.md Explorer bullet + caveat → "no child processes at runtime".
 
-- A: keep. The single runtime process launch, carried by an inline `noqa: S606, TID251  # nosec B606` and a special banned-api message.
-- B: remove the button + `open_folder` + `last_saved`; the "Saved: <path>" label stays. `os.startfile` becomes a plain ban; SECURITY.md drops the "Opens Explorer" bullet and the "(other than that one Explorer call)" caveat → "no child processes at runtime", unconditionally. Saves ~10 lines, `sys` import in app.py. Cost: user opens Explorer themselves.
+## Stage 4.3 — D3: one log file, overwritten per launch
+- `logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8")`; drop `logging.handlers` import + its `tests/test_imports.py` allow-list entry; SECURITY.md:11 stays `logs\app.log`.
 
-## [USER DECISION] D3 — Log file (app.py:12,21,193-199; SECURITY.md:11)
+## Stage 4.4 — D6: `.gitattributes` → `.claude/ export-ignore`
+- Verify: `git archive HEAD | tar -t` / zip listing has no `.claude/` (after commit).
 
-- Finding (any option): `RotatingFileHandler(backupCount=2)` also writes `logs\app.log.1` and `logs\app.log.2`; SECURITY.md:11 lists only `logs\app.log`.
-- A: keep rotation; fix SECURITY.md:11 to name all three files.
-- B: `logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8")` — one file, overwritten each launch; drops `logging.handlers` import + its allow-list entry (`tests/test_imports.py:13`). Cost: previous session's log lost on relaunch.
-- C: no file log. Cost: failures only visible in the messagebox; no diagnostics for support.
+## Stage 4.5 — A1: settle the PyAV local-file URL probe
+- Scratch only: positive control `av.open("http://127.0.0.1:8765/x.m3u8")` must HIT the listener; then the same playlist as local `.mp3` path and as `open(path, "rb")`. No hit → one honest-scope line in SECURITY.md; hit → stop, user decision (file object vs document).
 
-## [USER DECISION] D4 — Decoding parameters (engine.py:95, tests/test_engine.py:98-103)
-
-- `beam_size=7, patience=1.2, repetition_penalty=1.05` came from stt-faster variant 61 (quality tuning, not only parity).
-- A: keep (recommended — 1 line, reviewer cost ~0, known-good quality).
-- B: faster-whisper defaults (5 / 1 / 1): drop the kwargs + the test assertion. Changes transcripts; saves ~1 line + 5 test lines.
-
-## [USER DECISION] D5 — bandit (pyproject.toml:11, ci.yml:24, `# nosec` at setup.py:37, app.py:180)
-
-- A: keep.
-- B: drop; ruff `S` (flake8-bandit port, already selected at pyproject.toml:22) covers the same checks that fire here (S310, S606). Removes a second suppression dialect (`# nosec` next to `# noqa`), one CI step, bandit + stevedore from the lock. Cost: bandit's few checks without a ruff equivalent.
-
-## [USER DECISION] D6 — Assistant tooling in the repo/zip (`.claude/`)
-
-- `git archive` in release.yml:55 ships `.claude/settings.json`, `.claude/docs-bloat-gate.json`, `.claude/external-process-test-gate.off` to users.
-- A: keep.
-- B: `git rm --cached` the two gate toggles + add to `.gitignore` (local tooling unchanged); keep settings.json.
-- C: `.gitattributes`: `.claude/ export-ignore` — repo unchanged, zip omits it (`git archive` stays reproducible). Reviewer must know about export-ignore when comparing zip to tag.
-
-## [AUDIT] A1 — Does PyAV/ffmpeg ever open a URL from a local file?
-
-- Premise at stake: "no network at runtime" also depends on bundled ffmpeg not following references (HLS playlist, mov `dref`) inside a crafted local file. Content is probed, not the extension, so `is_audio` does not guard this.
-- Probe run: disguised HLS playlist as `.mp3` → no connection; positive control failed too → inconclusive.
-- Settling probe: build a positive control that DOES fetch (`av.open("http://127.0.0.1:8765/x.m3u8")` serving a valid playlist + `.ts` segment), then open the same playlist from a local `.mp3` path and from `open(path, "rb")`; watch the listener. If the local case never connects → one honest-scope line in SECURITY.md. If it connects → decide between passing a file object to `model.transcribe` and documenting.
-
-## [AUDIT] A2 — Outside-folder check is a 4-path denylist (release.yml:22-27)
-
-- Claim "nothing written outside the folder" is enforced only for `.local\bin\python*.exe`, `HKCU:\Software\Python\Astral`, `%LOCALAPPDATA%\uv`, `%APPDATA%\uv`.
-- Settling probe (one `workflow_dispatch` run): record a timestamp before install.bat, then list files under `%USERPROFILE%` and `%TEMP%` newer than it (excluding the checkout and runner dirs). If only Desktop `.lnk` appears → replace the denylist with that newer-than diff (checks the claim as stated, not four guesses).
+## Stage 4.6 — A2: newer-than diff replaces the 4-path denylist (release.yml:22-27)
+- Timestamp before install.bat; fail if any file under `%USERPROFILE%`/`%TEMP%` newer than it lies outside the checkout/runner dirs (expected set empty after 4.1). Blind — validated on the first `workflow_dispatch`.
 
 ## Considered, rejected
 
@@ -132,6 +107,6 @@ Goal: shrink what a security reviewer must read or take on trust. Scope: every t
 
 - `uv lock --check` (and with uv 0.12.19), `uv sync`, `uv run pytest`, `uv run pytest -m slow` (models present), `uv run ruff check . && uv run ruff format --check . && uv run pyright`.
 - `uv tree --no-dev` shows none of the excluded packages; SECURITY.md line count claim (`SECURITY.md:4`, "under 500 lines") still true.
-- Grep for stale refs: `stt-faster`, `golden`, `parity`, `Lang`, `model_dir`, `REQUIRED_FILES` usage unchanged.
+- Grep for stale refs: `stt-faster`, `golden`, `parity`, `Lang`, `model_dir`, `startfile`, `shortcut`, `uninstall`, `RotatingFileHandler`; `REQUIRED_FILES` usage unchanged.
 - Windows: one release.yml `workflow_dispatch` run (install.bat end to end, outside-folder check, firewall + `pytest -m slow`).
 - Code review in a fresh `code-reviewer` sub-agent over the whole plan range (`git diff <pre-Stage-1>..HEAD`), with SECURITY.md claims checked against the code.
