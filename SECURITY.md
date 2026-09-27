@@ -36,6 +36,8 @@ into the process. The runtime guarantee therefore rests on:
 - every model loading from a local folder path;
 - `engine.load_model` refusing to start if any of the five required model files is missing, so
   faster-whisper never falls back to downloading a tokenizer;
+- the bundled FFmpeg not following URLs inside a local file: tested for HLS only (PyAV 18.1.0 — not
+  detected unless named `.m3u8`; a local playlist may open only `file,crypto,data`);
 - the "disconnect the network" check below.
 
 ## Network egress (install time only)
