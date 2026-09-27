@@ -1,7 +1,7 @@
 # Security
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU. The whole app is
-under 500 lines of Python in `transcribe_offline/` plus three `.bat` files, written to be read in full.
+under 500 lines of Python in `transcribe_offline/` plus two `.bat` files, written to be read in full.
 
 ## What it does
 
@@ -17,7 +17,7 @@ under 500 lines of Python in `transcribe_offline/` plus three `.bat` files, writ
 No network access at runtime, no telemetry, no auto-update, no admin rights, no registry writes by the
 app itself (the Windows file dialog records recent folders, as for any app), no services or scheduled
 tasks, no child processes at runtime (other than that one Explorer call), and no writes outside its
-folder except the Desktop shortcut and the transcripts.
+folder except the transcripts.
 
 ## Honest scope of the import ban
 
