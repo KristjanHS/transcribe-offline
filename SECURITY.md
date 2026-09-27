@@ -1,7 +1,7 @@
 # Security
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU. The whole app is
-651 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus two `.bat` files,
+658 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus two `.bat` files,
 written to be read in full.
 
 ## What it does
@@ -31,7 +31,7 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 
 | Threat | Control | Verified by |
 |--------|---------|-------------|
-| Crafted audio file attacks FFmpeg | `engine.decode_audio`: `file` protocol only, 8 demuxers, audio-codec allow-list | unit tests |
+| Crafted audio file attacks FFmpeg | `engine.decode_audio`: `file` protocol only, 8 demuxers, audio-codec allow-list (FFmpeg's decoder whitelist, applied before any decoder runs) | unit tests |
 | A memory-corruption bug in FFmpeg or CTranslate2 | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
 | Our code opens a socket, starts a process or writes outside its folder | import ban (`TID251`, `test_imports.py`); runtime audit hook `guard.py` | static checks, unit tests, release smoke test |
 | Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; Tcl `exec`/`socket` hidden. The audit hook cannot see native code | Tcl: unit test; FFmpeg, CTranslate2: not verified |
@@ -62,9 +62,9 @@ into the process. The runtime guarantee therefore rests on:
 - `engine.load_model` refusing to start if any of the five required model files is missing, so
   faster-whisper never falls back to downloading a tokenizer;
 - FFmpeg opening only local files, with the demuxer and codec allow-lists in `engine.py`;
-- `guard.py`, a Python audit hook that `__main__` installs first: it refuses sockets, child processes
-  and writes outside the app folder or the chosen audio's folder. It sees Python calls only, not
-  native code (FFmpeg, CTranslate2, Tcl);
+- `guard.py`, a Python audit hook that `__main__` installs first: it refuses socket creation, DNS lookups,
+  child processes, and writes, renames and removes outside the app folder or the chosen audio's
+  folder. It sees Python calls only, not native code (FFmpeg, CTranslate2, Tcl);
 - the "disconnect the network" check below.
 
 ## Network egress (install time only)

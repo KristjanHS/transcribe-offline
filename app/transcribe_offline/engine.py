@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import math
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -21,6 +22,12 @@ AUDIO_EXTENSIONS = (".wav", ".mp3", ".m4a", ".flac", ".ogg", ".wma", ".aac", ".m
 # FFmpeg picks a demuxer by probing the content, not by the extension; only these may open a file.
 FORMATS = "wav,mp3,mov,flac,ogg,asf,aac,matroska"
 CODECS = ("aac", "alac", "flac", "mp3", "opus", "vorbis", "wmav1", "wmav2", "wmapro")  # + pcm_*
+# Decoders FFmpeg may open while probing the file, before the CODECS check in decode_audio runs.
+DECODERS = (
+    "mp3float,mp3,aac,alac,flac,opus,vorbis,wmav1,wmav2,wmapro,pcm_u8,pcm_s16le,pcm_s16be,"
+    "pcm_s24le,pcm_s24be,pcm_s32le,pcm_s32be,pcm_f32le,pcm_f32be,pcm_f64le,pcm_alaw,pcm_mulaw"
+)
+OPTIONS = {"protocol_whitelist": "file", "format_whitelist": FORMATS, "codec_whitelist": DECODERS}
 SAMPLE_RATE = 16000
 
 LANGUAGES = {"Estonian": "et", "English": "en"}  # name -> language code = folder under models/
@@ -79,9 +86,8 @@ def decode_audio(path: Path) -> NDArray[np.float32]:
     import av.error
     import numpy as np
 
-    options = {"protocol_whitelist": "file", "format_whitelist": FORMATS}
     try:
-        container = av.open(str(path), options=options, metadata_errors="ignore")
+        container = av.open(str(path), options=OPTIONS, metadata_errors="ignore")
     except av.error.ArgumentError as exc:  # EINVAL: no allowed demuxer recognises the content
         raise UnsupportedAudioError(f"not a supported audio format ({exc})") from exc
     with container:
@@ -93,7 +99,7 @@ def decode_audio(path: Path) -> NDArray[np.float32]:
         resampler = av.AudioResampler(format="s16", layout="mono", rate=SAMPLE_RATE)
         chunks = [
             out.to_ndarray().reshape(-1)
-            for frame in [*_frames(container), None]
+            for frame in itertools.chain(_frames(container), [None])
             for out in resampler.resample(frame)
         ]
     samples = np.concatenate(chunks) if chunks else np.zeros(0, np.int16)

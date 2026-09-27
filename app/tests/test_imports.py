@@ -22,6 +22,7 @@ ALLOWED = {
     "av.error",
     "collections.abc",
     "dataclasses",
+    "itertools",
     "logging",
     "math",
     "numpy",

@@ -165,16 +165,32 @@ def test_decode_audio_gives_16k_mono_float() -> None:
     assert len(samples) > engine.SAMPLE_RATE and 0 < np.abs(samples).max() <= 1
 
 
-def test_decode_audio_rejects_a_codec_outside_the_allow_list(tmp_path: Path) -> None:
-    path = tmp_path / "talk.mkv"
+def ac3_and_video_mkv(path: Path) -> Path:
     with av.open(str(path), "w") as out:
-        stream = out.add_stream("ac3", rate=48000)
+        audio = out.add_stream("ac3", rate=48000)
+        video = out.add_stream("mpeg4", rate=1)
+        video.width = video.height = 16
         frame = av.AudioFrame.from_ndarray(np.zeros((1, 48000), np.float32), "fltp", "mono")
         frame.rate = 48000
-        for packet in [*stream.encode(frame), *stream.encode(None)]:
+        picture = av.VideoFrame.from_ndarray(np.zeros((16, 16, 3), np.uint8), "rgb24")
+        for packet in [*audio.encode(frame), *audio.encode(None), *video.encode(picture)]:
             out.mux(packet)
+        for packet in video.encode(None):
+            out.mux(packet)
+    return path
+
+
+def test_decode_audio_rejects_a_codec_outside_the_allow_list(tmp_path: Path) -> None:
     with pytest.raises(engine.UnsupportedAudioError, match="codec: ac3"):
-        engine.decode_audio(path)
+        engine.decode_audio(ac3_and_video_mkv(tmp_path / "talk.mkv"))
+
+
+def test_opening_never_starts_a_decoder_outside_the_allow_list(tmp_path: Path) -> None:
+    # av.open probes every stream with its decoder; a started decoder would have set the format.
+    path = ac3_and_video_mkv(tmp_path / "talk.mkv")
+    with av.open(str(path), options=engine.OPTIONS) as container:
+        streams = container.streams
+        assert (streams.audio[0].format, streams.video[0].format) == (None, None)
 
 
 def test_decode_audio_rejects_content_that_probes_as_another_format(tmp_path: Path) -> None:

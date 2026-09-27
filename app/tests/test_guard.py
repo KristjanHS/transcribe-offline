@@ -15,7 +15,9 @@ def guard(tmp_path: Path) -> Guard:
     return g
 
 
-@pytest.mark.parametrize("event", ["socket.connect", "socket.getaddrinfo", "subprocess.Popen"])
+@pytest.mark.parametrize(
+    "event", ["socket.__new__", "socket.getaddrinfo", "socket.gethostbyname", "subprocess.Popen"]
+)
 def test_network_and_processes_are_blocked(guard: Guard, event: str) -> None:
     with pytest.raises(PermissionError, match=event):
         guard(event, ())
