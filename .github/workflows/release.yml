@@ -113,7 +113,8 @@ jobs:
             '\\Microsoft\\Windows\\PowerShell(\\|$)|\\Microsoft\\CLR_v4\.0(_32)?(\\|$)'
           $new = @(Get-ChildItem $h -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.CreationTimeUtc -gt $t0 -or (!$_.PSIsContainer -and $_.LastWriteTimeUtc -gt $t0) } |
-            ForEach-Object FullName | Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
+            ForEach-Object { '{0:HH:mm:ss.fff} {1}' -f $_.LastWriteTimeUtc, $_.FullName } |  # the time names the step
+            Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
           .github\scripts\as-standard-user.ps1 "$env:SystemRoot\System32\reg.exe" 'query HKCU\Software\Python\Astral'
           if (!$LASTEXITCODE) { $new += "tuser's HKCU\Software\Python\Astral" }
           $new | ForEach-Object { Write-Host "Written outside the folder: $_" }
