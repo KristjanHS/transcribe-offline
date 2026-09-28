@@ -65,8 +65,11 @@ jobs:
         run: |
           icacls $PWD /grant '*S-1-5-32-545:(OI)(CI)M' /T /Q  # BUILTIN\Users
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          .github\scripts\as-standard-user.ps1 "$env:SystemRoot\System32\cmd.exe" '/d /c exit'
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # The first logon creates the profile; the second, into an existing profile, creates tuser's DPAPI key.
+          foreach ($i in 1, 2) {
+            .github\scripts\as-standard-user.ps1 "$env:SystemRoot\System32\cmd.exe" '/d /c exit'
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
           New-Item -ItemType File "$env:RUNNER_TEMP\install-t0" | Out-Null
       - name: Transcribe-Setup.exe end to end, as tuser
         shell: pwsh
