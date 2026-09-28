@@ -34,6 +34,12 @@ jobs:
       - run: uv run bandit -q -r transcribe_offline
       - run: uv run zizmor --offline ../.github
       - run: uv run pytest
+      - name: Setup.cs compiles with the in-box .NET Framework compiler, as release.yml builds it
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /optimize+ /warnaserror+ /out:"$env:RUNNER_TEMP\Transcribe-Setup.exe" ..\installer\Setup.cs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: pip-audit on the locked runtime deps
         if: runner.os == 'Linux'
         run: |
