@@ -58,9 +58,19 @@ jobs:
         with:
           path: app/models
           key: models-${{ hashFiles('app/transcribe_offline/models.py') }}
-      - name: Transcribe-Setup.exe end to end (after marking its start time)
-        shell: cmd # zizmor: ignore[misfeature] the exe is what users run.
-        run: type nul > "%RUNNER_TEMP%\install-t0" && Transcribe-Setup.exe
+      # Install and smoke test run as a standard user, tuser: the runner image's background tasks (Firefox's
+      # agent, Windows' web caches) write to runneradmin's profile, so the final check scans tuser's alone.
+      - name: Let standard users modify this folder, create tuser and its profile, mark the start time
+        shell: pwsh
+        run: |
+          icacls $PWD /grant '*S-1-5-32-545:(OI)(CI)M' /T /Q  # BUILTIN\Users
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          .github\scripts\as-standard-user.ps1 "$env:SystemRoot\System32\cmd.exe" '/d /c exit'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          New-Item -ItemType File "$env:RUNNER_TEMP\install-t0" | Out-Null
+      - name: Transcribe-Setup.exe end to end, as tuser
+        shell: pwsh
+        run: .github\scripts\as-standard-user.ps1 "$PWD\Transcribe-Setup.exe"
       - &lnk
         name: Transcribe.lnk starts the venv's pythonw.exe in app\
         shell: pwsh
@@ -70,15 +80,15 @@ jobs:
           if (!(Test-Path Transcribe.lnk) -or $l.TargetPath -ne "$PWD\app\.venv\Scripts\pythonw.exe" -or
               $l.Arguments -ne '-m transcribe_offline' -or $l.WorkingDirectory -ne "$PWD\app") { exit 1 }
           Remove-Item Transcribe.lnk
-      - name: install.bat resuming it (the fallback path)
-        shell: cmd # zizmor: ignore[misfeature] install.bat is what users run.
-        run: install.bat
+      - name: install.bat resuming it (the fallback path), as tuser
+        shell: pwsh
+        run: .github\scripts\as-standard-user.ps1 "$env:SystemRoot\System32\cmd.exe" '/d /c install.bat'
       - *lnk
-      - name: Real-model smoke test in the installed .venv, under the runtime guard
+      - name: Real-model smoke test in the installed .venv, under the runtime guard, as tuser
         working-directory: app
         shell: pwsh
         run: |
-          .venv\Scripts\python.exe -c @'
+          $code = @'
           from transcribe_offline import guard
           guard.install()  # as __main__ does
           from transcribe_offline import APP_ROOT, engine
@@ -89,19 +99,23 @@ jobs:
               text = out.read_text(encoding='utf-8')
               assert word in text, text
           '@
-      - name: Nothing written outside the folder by install or smoke test (user profile, %TEMP%, uv's registry key)
+          ..\.github\scripts\as-standard-user.ps1 "$PWD\.venv\Scripts\python.exe" "-c `"$code`""
+      - name: Nothing written outside the folder by install or smoke test (tuser's profile and %TEMP%, uv's registry key)
         shell: pwsh
         run: |
           $t0 = (Get-Item "$env:RUNNER_TEMP\install-t0").LastWriteTimeUtc
-          # Windows' own files: registry hives, certificate-revocation cache, pwsh's and Windows PowerShell's
-          # own folders, and the .NET Framework's per-exe usage log (the setup exe, Windows PowerShell).
-          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\(Windows\\)?PowerShell(\\|$)|\\Microsoft\\CLR_v4\.0(_32)?(\\|$)'
-          $new = @(Get-ChildItem $env:USERPROFILE, $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue |
+          $h = (Get-CimInstance Win32_UserProfile | Where-Object LocalPath -Like '*\tuser').LocalPath
+          if (!$h) { exit 1 }
+          # Windows' own files: registry hives, certificate-revocation cache, Windows PowerShell's folder
+          # (install.bat's shortcut), and the .NET Framework's per-exe usage log (the setup exe, Windows PowerShell).
+          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\Windows\\PowerShell(\\|$)|\\Microsoft\\CLR_v4\.0(_32)?(\\|$)'
+          $new = @(Get-ChildItem $h -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.CreationTimeUtc -gt $t0 -or (!$_.PSIsContainer -and $_.LastWriteTimeUtc -gt $t0) } |
             ForEach-Object FullName | Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
-          if (Test-Path "HKCU:\Software\Python\Astral") { $new += "HKCU:\Software\Python\Astral" }
+          .github\scripts\as-standard-user.ps1 "$env:SystemRoot\System32\reg.exe" 'query HKCU\Software\Python\Astral'
+          if (!$LASTEXITCODE) { $new += "tuser's HKCU\Software\Python\Astral" }
           $new | ForEach-Object { Write-Host "Written outside the folder: $_" }
-          if ($new.Count) { exit 1 }
+          exit [int]($new.Count -gt 0)  # not reg.exe's exit code
   publish:
     needs: [setup-exe, install-and-smoke]
     if: startsWith(github.ref, 'refs/tags/')
