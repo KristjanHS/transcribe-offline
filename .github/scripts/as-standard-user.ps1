@@ -3,11 +3,16 @@
 # profile was written by our install. Output is shown when the command ends.
 param([Parameter(Mandatory)][string]$File, [string]$Arguments = ' ')  # Start-Process rejects an empty one
 $ErrorActionPreference = 'Stop'
-# Creates tuser, or gives it a fresh password (14 characters: net user asks before setting a longer one).
-$pw = 'Aa1!' + [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(5))
-net user tuser *> $null
-if ($LASTEXITCODE) { net user tuser $pw /add | Out-Null } else { net user tuser $pw | Out-Null }
-if ($LASTEXITCODE) { exit $LASTEXITCODE }
+# Creates tuser on the first call. Its password is set once: each change writes new DPAPI keys to its profile.
+$pwFile = "$env:RUNNER_TEMP\tuser.pw"
+if (!(Test-Path $pwFile)) {
+    # 14 characters: net user asks before setting a longer one.
+    $pw = 'Aa1!' + [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(5))
+    net user tuser $pw /add | Out-Null
+    if ($LASTEXITCODE) { exit $LASTEXITCODE }
+    Set-Content $pwFile $pw
+}
+$pw = Get-Content $pwFile
 $cred = [pscredential]::new('tuser', (ConvertTo-SecureString $pw -AsPlainText -Force))
 # The child inherits this environment: point its per-user folders at tuser's profile (once it exists).
 $h = (Get-CimInstance Win32_UserProfile | Where-Object LocalPath -Like '*\tuser').LocalPath

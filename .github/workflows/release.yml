@@ -106,9 +106,11 @@ jobs:
           $t0 = (Get-Item "$env:RUNNER_TEMP\install-t0").LastWriteTimeUtc
           $h = (Get-CimInstance Win32_UserProfile | Where-Object LocalPath -Like '*\tuser').LocalPath
           if (!$h) { exit 1 }
-          # Windows' own files: registry hives, certificate-revocation cache, Windows PowerShell's folder
-          # (install.bat's shortcut), and the .NET Framework's per-exe usage log (the setup exe, Windows PowerShell).
-          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\Windows\\PowerShell(\\|$)|\\Microsoft\\CLR_v4\.0(_32)?(\\|$)'
+          # Windows' own files: registry hives, certificate-revocation cache (and its LocalLow parent), the shell's
+          # empty Caches folder, Windows PowerShell's folder (install.bat's shortcut), and the .NET Framework's
+          # per-exe usage log (the setup exe, Windows PowerShell).
+          $os = '\\(NTUSER|UsrClass)\.DAT|\\LocalLow\\Microsoft(\\CryptnetUrlCache(\\|$)|$)|\\Microsoft\\Windows\\Caches$|' +
+            '\\Microsoft\\Windows\\PowerShell(\\|$)|\\Microsoft\\CLR_v4\.0(_32)?(\\|$)'
           $new = @(Get-ChildItem $h -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.CreationTimeUtc -gt $t0 -or (!$_.PSIsContainer -and $_.LastWriteTimeUtc -gt $t0) } |
             ForEach-Object FullName | Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
