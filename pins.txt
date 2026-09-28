@@ -1,0 +1,5 @@
+# Pinned by Transcribe-Setup.exe and install.bat; KEY=value, nothing else is read.
+UV_VERSION=0.12.19
+UV_SHA256=6dbb02d79e419522f1c500f0adb1cddcff0cda7d59b0d66ea7f5e3b4a1b2f5f0
+UV_EXE_SHA256=f94eddb81f3addca6ef8f2361a70c3edde31adcbd1000a55fc6674306ae0b1e7
+PYTHON_VERSION=3.12.14

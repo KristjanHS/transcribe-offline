@@ -3,12 +3,17 @@ setlocal
 cd /d "%~dp0app"
 rem Installs into the app folder: pinned uv -> locked Python deps -> pinned, SHA-256-verified models.
 rem Nothing is written outside this folder. No admin rights needed.
+rem Fallback for Transcribe-Setup.exe (same steps); both read the pins from pins.txt.
 
-set "UV_VERSION=0.12.19"
-set "UV_SHA256=6dbb02d79e419522f1c500f0adb1cddcff0cda7d59b0d66ea7f5e3b4a1b2f5f0"
-set "UV_EXE_SHA256=f94eddb81f3addca6ef8f2361a70c3edde31adcbd1000a55fc6674306ae0b1e7"
 set "SYS=%SystemRoot%\System32"
-set "PYTHON_VERSION=3.12.14"
+set "PINS=UV_VERSION UV_SHA256 UV_EXE_SHA256 PYTHON_VERSION"
+for %%K in (%PINS%) do set "%%K="
+rem Only these four keys are taken from pins.txt; any other line is ignored.
+for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%~dp0pins.txt") do for %%K in (%PINS%) do if "%%A"=="%%K" set "%%K=%%B"
+for %%K in (%PINS%) do if not defined %%K (
+    echo pins.txt beside install.bat has no %%K.
+    goto :fail
+)
 
 set "UV_CACHE_DIR=%CD%\.uv\cache"
 set "UV_PYTHON_INSTALL_DIR=%CD%\.uv\python"
@@ -53,8 +58,14 @@ echo Installing Python %PYTHON_VERSION% and the locked dependencies ...
 echo Downloading and verifying the models (about 3 GB) ...
 ".venv\Scripts\python.exe" -m transcribe_offline.setup || goto :fail
 
+rem Made here, so it carries no Mark of the Web; its working directory makes the package importable.
+echo Creating Transcribe.lnk ...
+set "LNK=%~dp0Transcribe.lnk"
+set "APP=%CD%"
+"%SYS%\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -Command "$l = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK); $l.TargetPath = Join-Path $env:APP '.venv\Scripts\pythonw.exe'; $l.Arguments = '-m transcribe_offline'; $l.WorkingDirectory = $env:APP; $l.Save()" || goto :fail
+
 echo.
-echo Done. Start the app with Transcribe.bat.
+echo Done. Start the app with Transcribe.lnk in this folder.
 if not defined CI pause
 exit /b 0
 

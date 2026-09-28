@@ -1,6 +1,9 @@
 *.bat text eol=crlf
-# The release zip holds only what the user runs: install.bat, Transcribe.bat, LICENSE, app/.
+pins.txt text eol=crlf
+# The release zip holds only what the user runs: Transcribe-Setup.exe (added by release.yml),
+# install.bat, pins.txt, LICENSE, app/. The exe's source is proven by the build attestation.
 .claude/ export-ignore
+installer/ export-ignore
 .github/ export-ignore
 docs/ export-ignore
 app/tests/ export-ignore
