@@ -17,11 +17,15 @@ _(Developers: jump to [Development](#development).)_
    Optional, before extracting: check that the zip is the one GitHub built with
    `gh attestation verify transcribe-offline-vX.Y.Z.zip -R KristjanHS/transcribe-offline`
    (without `gh`: compare PowerShell `Get-FileHash transcribe-offline-vX.Y.Z.zip` with `SHA256SUMS`).
-2. Double-click `install.bat`. It downloads about 3.5 GB (uv, Python, libraries, two speech models),
-   verifying every file against a pinned hash. If it stops, run it again to continue; it re-hashes
-   uv and the models and downloads only what is missing or does not match.
-   Windows may warn that the `.bat` files are unsigned; that is expected.
-3. Start `Transcribe.bat` in the folder (right-click → Send to → Desktop for a shortcut).
+2. Double-click `Transcribe-Setup.exe`. It downloads about 3.5 GB (uv, Python, libraries, two speech
+   models), verifying every file against a pinned hash. If it stops, run it again to continue; it
+   re-hashes uv and the models and downloads only what is missing or does not match.
+   Windows may warn that it is unsigned (More info → Run anyway); that is expected.
+   If Windows blocks it outright (Smart App Control or your organisation's App Control): delete the
+   folder, right-click the zip → Properties → tick **Unblock** → OK, extract again and double-click
+   `install.bat` instead. It does the same steps.
+3. Start `Transcribe.lnk` in the folder (copy it to the Desktop if you like). After moving the folder,
+   run the setup again to repair the shortcut.
 
 Pick audio files, choose the language, press Start. Each `.txt` is saved beside its audio file, so in a
 OneDrive-synced or shared folder it is synced or shared too.
@@ -30,7 +34,7 @@ Known limit: proxies that require NTLM authentication may block the download.
 
 **Upgrade:** the app never updates itself; security fixes come as a new release. Extract the
 new zip to a new folder, optionally copy the old `app\models\` folder into the new `app\`, run
-`install.bat`. **Uninstall:** delete the folder.
+`Transcribe-Setup.exe`. **Uninstall:** delete the folder.
 
 ## License
 
@@ -42,7 +46,8 @@ MIT License - see [LICENSE](LICENSE).
 
 _Everything below is for building or testing from source — not needed to [install the app](#install-windows-10-1803--11-no-admin-rights)._
 
-Run these in `app/` (the Python project; the release zip ships only it, the two `.bat` files and `LICENSE`).
+Run these in `app/` (the Python project; the release zip ships only it, `Transcribe-Setup.exe` built from
+`installer/Setup.cs`, `install.bat`, `pins.txt` and `LICENSE`).
 
 - `uv sync` · `uv run python -m transcribe_offline` (runs on Linux too; needs `models/`)
 - Models: `uv run python -m transcribe_offline.setup`

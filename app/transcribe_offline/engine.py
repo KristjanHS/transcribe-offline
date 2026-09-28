@@ -57,7 +57,8 @@ def load_model(models_root: Path, language: str) -> WhisperModel:
     path = models_root / language
     missing = missing_files(path)
     if missing:
-        raise ModelMissingError(f"Missing in {path}: {', '.join(missing)}. Run install.bat.")
+        names = ", ".join(missing)
+        raise ModelMissingError(f"Missing in {path}: {names}. Run Transcribe-Setup.exe.")
     from faster_whisper import WhisperModel  # deferred: heavy import, only needed once a job starts
 
     return WhisperModel(str(path), device="cpu", compute_type="int8")

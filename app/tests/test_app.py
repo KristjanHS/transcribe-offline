@@ -13,7 +13,7 @@ def test_run_job_reports_missing_model_and_finishes(tmp_path: Path) -> None:
     )
     got = [events.get_nowait() for _ in range(events.qsize())]
     assert [e.kind for e in got] == ["failed", "finished"]
-    assert "install.bat" in got[0].text
+    assert "Transcribe-Setup.exe" in got[0].text
 
 
 def test_seconds_left_waits_for_a_meaningful_rate() -> None:

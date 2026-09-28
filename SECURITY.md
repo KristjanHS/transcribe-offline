@@ -1,7 +1,8 @@
 # Security
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU. The whole app is
-651 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus two `.bat` files,
+654 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
+(`installer/Setup.cs`, 162 lines, built into `Transcribe-Setup.exe`) and its fallback `install.bat`,
 written to be read in full.
 
 ## What it does
@@ -35,8 +36,8 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 | A memory-corruption bug in FFmpeg or CTranslate2 | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
 | Our code opens a socket, starts a process or writes outside its folder | import ban (`TID251`, `test_imports.py`); runtime audit hook `guard.py` | static checks, unit tests, release smoke test |
 | Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; our code never passes Tcl text (no `.call`/`.eval`). The audit hook cannot see native code | Tcl: `test_imports.py`; FFmpeg, CTranslate2: not verified |
-| Install or app writes outside the folder | `install.bat` points uv's cache, Python and temp files at `app\`; `guard.py` at runtime | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
-| Tampered download at install time | SHA-256 pins (table below) | `test_setup.py`; release CI runs `install.bat` |
+| Install or app writes outside the folder | `Transcribe-Setup.exe` / `install.bat` point uv's cache, Python and temp files at `app\`; `guard.py` at runtime | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
+| Tampered download at install time | SHA-256 pins (table below) | `test_setup.py`; release CI runs `Transcribe-Setup.exe`, then `install.bat` |
 | Tampered release zip | provenance attestation | the user (README install step 1) |
 | Transcript leaves the machine (OneDrive, share, WER) | none in the app; user's folder choice, admin WER policy | not verified |
 | Known vulnerability in a pinned dependency | weekly `pip-audit` in CI; new release (see Updates) | CI; native parts manual |
@@ -71,28 +72,33 @@ into the process. The runtime guarantee therefore rests on:
 
 | Host | What | Pin |
 |------|------|-----|
-| github.com → release-assets.githubusercontent.com | uv 0.12.19 zip | SHA-256 in `install.bat` |
+| github.com → release-assets.githubusercontent.com | uv 0.12.19 zip | SHA-256 in `pins.txt` |
 | github.com (python-build-standalone, via uv) | Python 3.12.14 | uv's embedded hash table |
 | pypi.org / files.pythonhosted.org | wheels | `app/uv.lock` hashes (`uv sync --frozen`) |
 | huggingface.co → us.aws.cdn.hf.co (`model.bin`) | models | commit + SHA-256 per file in `app/transcribe_offline/models.py` |
 
 Redirect hosts as observed with `curl -sI`; the hashes, not the hosts, are the integrity anchor.
 python-build-standalone's CDN host is whatever github.com redirects to (unverified until the first
-Windows run). `install.bat` clears inherited `UV_*` and `SSL_CERT_*` variables that could redirect a
-download.
+Windows run). `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
+variables that could redirect a download.
 
-Trust chain: release zip (provenance attestation) → uv zip hash → uv's Python hashes → lock wheel
+Trust chain: release zip (provenance attestation; the exe inside also carries the attestation of the
+run that compiled it) → uv zip hash → uv's Python hashes → lock wheel
 hashes → model hashes. `SHA256SUMS` sits in the same release as the zip, so it catches corruption, not
 tampering. The project itself is never built (`[tool.uv] package = false`), so no unpinned build
-backend is fetched. Each run of `install.bat` re-hashes `uv.exe` and every model file and downloads
+backend is fetched. Each setup run re-hashes `uv.exe` and every model file and downloads
 again any that do not match; it does not re-check the installed Python or wheels.
 
 Releases also ship `sbom.cdx.json` (CycloneDX list of the locked Python packages), covered by
 `SHA256SUMS` and the attestation.
 
-The `.bat` files and the Python executables are unsigned. Windows may warn before running them, and
-AppLocker/WDAC default rules may block programs in a user folder. For an allow-list: `uv.exe`'s
-SHA-256 is `UV_EXE_SHA256` in `install.bat`; hash the Python executables under `app\.uv\python\` and
+`Transcribe-Setup.exe`, `install.bat` and the Python executables are unsigned. Windows may warn before
+running them, and AppLocker/WDAC default rules may block programs in a user folder. The exe is rebuilt
+only when `installer/` changes, so its hash (and Windows reputation) stays the same across releases;
+`gh attestation verify Transcribe-Setup.exe -R KristjanHS/transcribe-offline` names the run that compiled
+it. `av`, `ctranslate2`, `numpy` and `tokenizers` are held at versions Windows App Control already
+trusts (`constraint-dependencies` in `app/pyproject.toml`). For an allow-list: `uv.exe`'s SHA-256 is
+`UV_EXE_SHA256` in `pins.txt`; hash the Python executables under `app\.uv\python\` and
 `app\.venv\Scripts\` after install.
 
 ## Updates
@@ -102,12 +108,12 @@ you install a new release. Security updates are a new release. A high-severity i
 dependency gets a new release within 14 days.
 
 `pip-audit` sees PyPI advisories only. Before each release the maintainer checks the upstream
-advisories of the native parts: uv and CPython (pins in `install.bat`), FFmpeg 8.1.2 (bundled in `av` 18.1.0), CTranslate2 and
+advisories of the native parts: uv and CPython (pins in `pins.txt`), FFmpeg 8.0 (bundled in `av` 16.0.1), CTranslate2 and
 tokenizers (versions in `app/uv.lock`).
 
 ## Verify it yourself (~15 min)
 
-1. Read `install.bat`.
+1. Read `installer/Setup.cs` (`install.bat` does the same steps).
 2. In `app/` of a git clone, run `uv lock --check`.
 3. Run `uv run ruff check .` and `uv run pytest tests/test_imports.py` — they pass only if the runtime
    modules' static imports stay inside the ban and the allow-list. To see them bite, add
