@@ -99,7 +99,8 @@ only when `installer/` changes, so its hash (and Windows reputation) stays the s
 it. `av`, `ctranslate2`, `numpy` and `tokenizers` are held at versions Windows App Control already
 trusts (`constraint-dependencies` in `app/pyproject.toml`). For an allow-list: `uv.exe`'s SHA-256 is
 `UV_EXE_SHA256` in `pins.txt`; hash the Python executables under `app\.uv\python\` and
-`app\.venv\Scripts\` after install.
+`app\.venv\Scripts\` after install. Windows itself logs .NET and PowerShell runs under
+`%LOCALAPPDATA%\Microsoft\` (`CLR_v4.0\UsageLogs`, `Windows\PowerShell`); the release CI allows only those.
 
 ## Updates
 

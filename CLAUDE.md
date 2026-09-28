@@ -8,6 +8,7 @@ Minimal offline speech-to-text GUI (Estonian + English, CPU, faster-whisper). Th
 2. **Every download is pinned**: uv by SHA-256 in `pins.txt`, wheels by `uv.lock` hashes, models by commit + SHA-256 in `models.py`.
 3. **Nothing is written outside the install folder**, except the `.txt` transcripts written beside the user's audio.
 4. **Minimal by default.** Don't add features, dependencies, or config knobs without being asked; the reviewer's reading time is the product.
+
 ## Commands (run in `app/`, or `uv --directory app …`)
 
 - Env: `uv sync`

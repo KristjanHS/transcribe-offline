@@ -37,7 +37,7 @@ static class Setup
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Console.WriteLine((e.InnerException ?? e).Message);  // COM errors arrive wrapped
             Console.WriteLine();
             Console.WriteLine("Installation failed - see the message above. Running Transcribe-Setup.exe again resumes.");
         }
@@ -83,13 +83,14 @@ static class Setup
             string zip = Path.Combine(uvDir, "uv.zip");
             string url = "https://github.com/astral-sh/uv/releases/download/" + pins["UV_VERSION"]
                 + "/uv-x86_64-pc-windows-msvc.zip";
-            Run(Path.Combine(sys, "curl.exe"), "-fL -o " + Quote(zip) + " " + Quote(url), app);
+            // Relative to app\ as in install.bat, so curl and tar never see a non-ASCII folder name.
+            Run(Path.Combine(sys, "curl.exe"), @"-fL -o .uv\uv.zip " + Quote(url), app);
             if (!HashIs(zip, pins["UV_SHA256"]))
             {
                 File.Delete(zip);
                 throw new Fail("The uv download does not match the pinned SHA-256.\nExpected: " + pins["UV_SHA256"]);
             }
-            Run(Path.Combine(sys, "tar.exe"), "-xf " + Quote(zip) + " -C " + Quote(uvDir), app);
+            Run(Path.Combine(sys, "tar.exe"), @"-xf .uv\uv.zip -C .uv", app);
             File.Delete(zip);
         }
         if (!HashIs(uvExe, pins["UV_EXE_SHA256"])) throw new Fail("uv.exe does not match the pinned SHA-256.");

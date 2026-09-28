@@ -62,10 +62,20 @@ rem Made here, so it carries no Mark of the Web; its working directory makes the
 echo Creating Transcribe.lnk ...
 set "LNK=%~dp0Transcribe.lnk"
 set "APP=%CD%"
-"%SYS%\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -Command "$l = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK); $l.TargetPath = Join-Path $env:APP '.venv\Scripts\pythonw.exe'; $l.Arguments = '-m transcribe_offline'; $l.WorkingDirectory = $env:APP; $l.Save()" || goto :fail
+"%SYS%\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -Command "$l = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK); $l.TargetPath = Join-Path $env:APP '.venv\Scripts\pythonw.exe'; $l.Arguments = '-m transcribe_offline'; $l.WorkingDirectory = $env:APP; $l.Save()" || (
+    rem PowerShell's ConstrainedLanguage mode (App Control) refuses WScript.Shell: write a launcher instead.
+    > "%~dp0Transcribe.bat" (
+        echo @cd /d "%%~dp0app"
+        echo @start "" ".venv\Scripts\pythonw.exe" -m transcribe_offline
+    )
+    echo.
+    echo Done. Start the app with Transcribe.bat in this folder.
+    goto :done
+)
 
 echo.
 echo Done. Start the app with Transcribe.lnk in this folder.
+:done
 if not defined CI pause
 exit /b 0
 

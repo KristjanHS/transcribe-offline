@@ -58,16 +58,22 @@ jobs:
         with:
           path: app/models
           key: models-${{ hashFiles('app/transcribe_offline/models.py') }}
-      - name: Transcribe-Setup.exe end to end, then install.bat resuming it (after marking the start time)
-        shell: cmd # zizmor: ignore[misfeature] these are what users run.
-        run: type nul > "%RUNNER_TEMP%\install-t0" && Transcribe-Setup.exe && install.bat
-      - name: Transcribe.lnk starts the venv's pythonw.exe in app\
+      - name: Transcribe-Setup.exe end to end (after marking its start time)
+        shell: cmd # zizmor: ignore[misfeature] the exe is what users run.
+        run: type nul > "%RUNNER_TEMP%\install-t0" && Transcribe-Setup.exe
+      - &lnk
+        name: Transcribe.lnk starts the venv's pythonw.exe in app\
         shell: pwsh
         run: |
           $l = (New-Object -ComObject WScript.Shell).CreateShortcut("$PWD\Transcribe.lnk")
           $l | Format-List TargetPath, Arguments, WorkingDirectory
           if (!(Test-Path Transcribe.lnk) -or $l.TargetPath -ne "$PWD\app\.venv\Scripts\pythonw.exe" -or
               $l.Arguments -ne '-m transcribe_offline' -or $l.WorkingDirectory -ne "$PWD\app") { exit 1 }
+          Remove-Item Transcribe.lnk
+      - name: install.bat resuming it (the fallback path)
+        shell: cmd # zizmor: ignore[misfeature] install.bat is what users run.
+        run: install.bat
+      - *lnk
       - name: Real-model smoke test in the installed .venv, under the runtime guard
         working-directory: app
         shell: pwsh
@@ -88,8 +94,8 @@ jobs:
         run: |
           $t0 = (Get-Item "$env:RUNNER_TEMP\install-t0").LastWriteTimeUtc
           # Windows' own files: registry hives, certificate-revocation cache, pwsh's and Windows PowerShell's
-          # own folders (install.bat makes the shortcut with Windows PowerShell).
-          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\(Windows\\)?PowerShell(\\|$)'
+          # own folders, and the .NET Framework's per-exe usage log (the setup exe, Windows PowerShell).
+          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\(Windows\\)?PowerShell(\\|$)|\\Microsoft\\CLR_v4\.0(_32)?(\\|$)'
           $new = @(Get-ChildItem $env:USERPROFILE, $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.CreationTimeUtc -gt $t0 -or (!$_.PSIsContainer -and $_.LastWriteTimeUtc -gt $t0) } |
             ForEach-Object FullName | Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
