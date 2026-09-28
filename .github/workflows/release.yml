@@ -6,20 +6,68 @@ on:
 permissions:
   contents: read
 jobs:
+  setup-exe:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the earlier release's tag, for the installer/ diff
+      # A rebuilt exe has a new hash and starts with no Windows reputation, so reuse it while installer/ is unchanged.
+      - name: Rebuild or reuse the previous release's Transcribe-Setup.exe
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash .github/scripts/setup-exe-reuse.sh "$GITHUB_REF_NAME" .
+      - name: Build Transcribe-Setup.exe with the in-box .NET Framework compiler
+        if: env.REBUILD == 'true'
+        shell: pwsh
+        run: |
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /optimize+ /warnaserror+ /out:Transcribe-Setup.exe installer\Setup.cs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - if: env.REBUILD == 'true' # each exe hash is attested once, by the run that compiled it
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: Transcribe-Setup.exe
+      - name: Reminder for a rebuilt exe
+        if: env.REBUILD == 'true'
+        shell: pwsh
+        run: Add-Content $env:GITHUB_STEP_SUMMARY "Rebuilt Transcribe-Setup.exe (new hash). After publishing, submit it at https://www.microsoft.com/en-us/wdsi/filesubmission (Software developer, Microsoft Defender SmartScreen, Incorrectly detected)."
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Transcribe-Setup
+          path: Transcribe-Setup.exe
+          if-no-files-found: error
   install-and-smoke:
+    needs: setup-exe
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: Transcribe-Setup
       # setup.py re-hashes every cached model file, so a poisoned cache cannot ship.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # zizmor: ignore[cache-poisoning] v6.1.0
         with:
           path: app/models
           key: models-${{ hashFiles('app/transcribe_offline/models.py') }}
-      - name: install.bat end to end (after marking its start time)
-        shell: cmd # zizmor: ignore[misfeature] install.bat is what users run.
-        run: type nul > "%RUNNER_TEMP%\install-t0" && install.bat
+      - name: Transcribe-Setup.exe end to end, then install.bat resuming it (after marking the start time)
+        shell: cmd # zizmor: ignore[misfeature] these are what users run.
+        run: type nul > "%RUNNER_TEMP%\install-t0" && Transcribe-Setup.exe && install.bat
+      - name: Transcribe.lnk starts the venv's pythonw.exe in app\
+        shell: pwsh
+        run: |
+          $l = (New-Object -ComObject WScript.Shell).CreateShortcut("$PWD\Transcribe.lnk")
+          $l | Format-List TargetPath, Arguments, WorkingDirectory
+          if (!(Test-Path Transcribe.lnk) -or $l.TargetPath -ne "$PWD\app\.venv\Scripts\pythonw.exe" -or
+              $l.Arguments -ne '-m transcribe_offline' -or $l.WorkingDirectory -ne "$PWD\app") { exit 1 }
       - name: Real-model smoke test in the installed .venv, under the runtime guard
         working-directory: app
         shell: pwsh
@@ -39,8 +87,9 @@ jobs:
         shell: pwsh
         run: |
           $t0 = (Get-Item "$env:RUNNER_TEMP\install-t0").LastWriteTimeUtc
-          # Windows' own files: registry hives, certificate-revocation cache, pwsh's own folder.
-          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\PowerShell(\\|$)'
+          # Windows' own files: registry hives, certificate-revocation cache, pwsh's and Windows PowerShell's
+          # own folders (install.bat makes the shortcut with Windows PowerShell).
+          $os = '\\(NTUSER|UsrClass)\.DAT|\\CryptnetUrlCache\\|\\Microsoft\\(Windows\\)?PowerShell(\\|$)'
           $new = @(Get-ChildItem $env:USERPROFILE, $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.CreationTimeUtc -gt $t0 -or (!$_.PSIsContainer -and $_.LastWriteTimeUtc -gt $t0) } |
             ForEach-Object FullName | Where-Object { $_ -notmatch $os } | Sort-Object -Unique)
@@ -48,7 +97,7 @@ jobs:
           $new | ForEach-Object { Write-Host "Written outside the folder: $_" }
           if ($new.Count) { exit 1 }
   publish:
-    needs: install-and-smoke
+    needs: [setup-exe, install-and-smoke]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     environment: release
@@ -64,12 +113,16 @@ jobs:
         with:
           version: "0.12.19"
           enable-cache: false
-      - name: Build zip + SBOM + SHA256SUMS
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: Transcribe-Setup
+      - name: Build zip (with the tested exe) + SBOM + SHA256SUMS
         run: |
           name="transcribe-offline-${GITHUB_REF_NAME}"
           git archive --format=zip --prefix="$name/" -o "$name.zip" "$GITHUB_REF_NAME"
+          mkdir "$name" && cp Transcribe-Setup.exe "$name/" && zip -q "$name.zip" "$name/Transcribe-Setup.exe"
           uv export --project app --frozen --no-dev --format cyclonedx1.5 > sbom.cdx.json
-          sha256sum "$name.zip" sbom.cdx.json > SHA256SUMS
+          sha256sum "$name.zip" Transcribe-Setup.exe sbom.cdx.json > SHA256SUMS
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
@@ -78,4 +131,4 @@ jobs:
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" transcribe-offline-*.zip sbom.cdx.json SHA256SUMS --verify-tag --title "$GITHUB_REF_NAME"
+        run: gh release create "$GITHUB_REF_NAME" transcribe-offline-*.zip Transcribe-Setup.exe sbom.cdx.json SHA256SUMS --verify-tag --title "$GITHUB_REF_NAME"
