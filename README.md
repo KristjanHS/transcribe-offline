@@ -24,7 +24,8 @@ _(Developers: jump to [Development](#development).)_
    If Windows blocks it outright (Smart App Control or your organisation's App Control): delete the
    folder, right-click the zip → Properties → tick **Unblock** → OK, extract again and double-click
    `install.bat` instead. It does the same steps.
-3. Start `Transcribe.lnk` in the folder (copy it to the Desktop if you like). After moving the folder,
+3. Start `Transcribe.lnk` in the folder (copy it to the Desktop if you like), or `Transcribe.bat` if
+   `install.bat` says so. After moving the folder,
    run the setup again to repair the shortcut.
 
 Pick audio files, choose the language, press Start. Each `.txt` is saved beside its audio file, so in a

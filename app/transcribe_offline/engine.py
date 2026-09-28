@@ -91,7 +91,7 @@ def decode_audio(path: Path) -> NDArray[np.float32]:
         container = av.open(str(path), options=OPTIONS, metadata_errors="ignore")
     except av.error.ValueError as exc:  # EINVAL: no allowed demuxer recognises the content
         raise UnsupportedAudioError(f"not a supported audio format ({exc})") from exc
-    try:  # not `with`: av 16's typed __exit__ may swallow, leaving `chunks` possibly unbound
+    try:  # not `with`: av 16 types __exit__ as bool, so pyright deems `chunks` unbound
         if not container.streams.audio:
             raise UnsupportedAudioError("no audio stream")
         codec = container.streams.audio[0].codec_context.codec.canonical_name

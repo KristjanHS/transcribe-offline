@@ -5,3 +5,6 @@ logs/
 __pycache__/
 .ruff_cache/
 .pytest_cache/
+/Transcribe.lnk
+/Transcribe.bat
+/Transcribe-Setup.exe
