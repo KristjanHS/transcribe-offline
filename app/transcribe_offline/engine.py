@@ -88,9 +88,9 @@ def decode_audio(path: Path) -> NDArray[np.float32]:
 
     try:
         container = av.open(str(path), options=OPTIONS, metadata_errors="ignore")
-    except av.error.ArgumentError as exc:  # EINVAL: no allowed demuxer recognises the content
+    except av.error.ValueError as exc:  # EINVAL: no allowed demuxer recognises the content
         raise UnsupportedAudioError(f"not a supported audio format ({exc})") from exc
-    with container:
+    try:  # not `with`: av 16's typed __exit__ may swallow, leaving `chunks` possibly unbound
         if not container.streams.audio:
             raise UnsupportedAudioError("no audio stream")
         codec = container.streams.audio[0].codec_context.codec.canonical_name
@@ -102,6 +102,8 @@ def decode_audio(path: Path) -> NDArray[np.float32]:
             for frame in itertools.chain(_frames(container), [None])
             for out in resampler.resample(frame)
         ]
+    finally:
+        container.close()
     samples = np.concatenate(chunks) if chunks else np.zeros(0, np.int16)
     return samples.astype(np.float32) / 32768.0
 

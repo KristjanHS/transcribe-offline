@@ -16,6 +16,9 @@ exclude-dependencies = [
     "onnxruntime",  # Silero VAD only; engine never enables vad_filter.
     "hf-xet", "httpx", "fsspec", "click",  # Hub download/CLI stack; models load from a local path.
 ]
+# Native wheels Windows App Control (Smart App Control / ISG) already trusts by reputation;
+# av 18.1.0 was blocked. Bump only to versions proven on an enforcing PC.
+constraint-dependencies = ["av==16.0.1", "ctranslate2==4.6.2", "numpy==2.3.5", "tokenizers==0.22.1"]
 
 [tool.ruff]
 line-length = 100

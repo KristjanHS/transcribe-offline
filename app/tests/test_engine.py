@@ -169,6 +169,7 @@ def ac3_and_video_mkv(path: Path) -> Path:
     with av.open(str(path), "w") as out:
         audio = out.add_stream("ac3", rate=48000)
         video = out.add_stream("mpeg4", rate=1)
+        assert isinstance(audio, av.AudioStream) and isinstance(video, av.VideoStream)
         video.width = video.height = 16
         frame = av.AudioFrame.from_ndarray(np.zeros((1, 48000), np.float32), "fltp", "mono")
         frame.rate = 48000
