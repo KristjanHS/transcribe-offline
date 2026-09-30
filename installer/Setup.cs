@@ -8,6 +8,17 @@ using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
 
+// Identifies the exe in Properties > Details (csc turns these into its version resource). An anonymous
+// .NET exe that spawns curl and tar scores as a downloader with antivirus heuristics; a described one less so.
+// The version is the installer's own, not the app's: it changes only with this file (see release.yml).
+[assembly: AssemblyTitle("Transcribe Offline setup")]
+[assembly: AssemblyDescription("Installs Transcribe Offline into the folder it is run from, verifying every download against the hashes in pins.txt.")]
+[assembly: AssemblyProduct("Transcribe Offline")]
+[assembly: AssemblyCompany("https://github.com/KristjanHS/transcribe-offline")]
+[assembly: AssemblyCopyright("MIT License")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
+
 static class Setup
 {
     static readonly string[] PinKeys = { "UV_VERSION", "UV_SHA256", "UV_EXE_SHA256", "PYTHON_VERSION" };
