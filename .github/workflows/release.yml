@@ -154,7 +154,11 @@ jobs:
           subject-path: |
             transcribe-offline-*.zip
             sbom.cdx.json
-      - name: Create release
+      - name: Create release (the notes open with the one file a user needs, the rest of Assets is for verification)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" transcribe-offline-*.zip Transcribe-Setup.exe sbom.cdx.json SHA256SUMS --verify-tag --title "$GITHUB_REF_NAME"
+          GH_REPO: ${{ github.repository }}
+        run: |
+          zip="transcribe-offline-${GITHUB_REF_NAME}.zip"
+          notes="**Download: [$zip](https://github.com/$GH_REPO/releases/download/$GITHUB_REF_NAME/$zip)**, extract it and double-click \`Transcribe-Setup.exe\` inside (see the [README](https://github.com/$GH_REPO#readme)). The other files under Assets are for verification only."
+          gh release create "$GITHUB_REF_NAME" "$zip" Transcribe-Setup.exe sbom.cdx.json SHA256SUMS --verify-tag --title "$GITHUB_REF_NAME" --notes "$notes"
