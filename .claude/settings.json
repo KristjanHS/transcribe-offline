@@ -16,5 +16,18 @@
       "Read(**/.ruff_cache/**)",
       "Read(**/.pytest_cache/**)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 120,
+            "command": "[ \"${CLAUDE_CODE_REMOTE:-}\" = true ] || exit 0; D=/opt/dotfiles; if [ -d \"$D/.git\" ]; then git -C \"$D\" pull -q --ff-only 2>&1 | tail -1; else git clone -q --depth 1 https://github.com/KristjanHS/dotfiles \"$D\" 2>&1 | tail -1; fi; DOTFILES=\"$D\" bash \"$D/scripts/cloud-link-config.sh\" 2>&1 || echo 'cloud-link: FAILED (dotfiles clone or script error)'; exit 0"
+          }
+        ]
+      }
+    ]
   }
 }
