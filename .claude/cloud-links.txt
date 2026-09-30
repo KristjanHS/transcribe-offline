@@ -1,0 +1,28 @@
+# Dotfiles items to link into this repo in Claude Code CLOUD sessions.
+# Consumed by dotfiles/scripts/cloud-link-config.sh from the SessionStart hook in
+# .claude/settings.json (cloud-gated on CLAUDE_CODE_REMOTE=true).
+# Format: <path relative to dotfiles repo>|<dest relative to this repo, or ~/...>
+# On the laptop these come from ~/.claude/ (global) and link-stack-config.sh (stack).
+
+# --- global operating instructions (loaded as project memory alongside ./CLAUDE.md)
+claude/.claude/CLAUDE.md|.claude/CLAUDE.md
+claude/.claude/references|~/.claude/references   # CLAUDE.md cites these by ~/.claude/ path
+
+# --- python stack (mirrors link-stack-config.sh PY_LINKS)
+skills/python-simplifier|.claude/skills/python-simplifier
+claude/.claude/rules/python-refactors.md|.claude/rules/python-refactors.md
+
+# --- global rules (path-gated; fire on tests/**, CLAUDE.md, lock files, ...)
+claude/.claude/rules/testing.md|.claude/rules/testing.md
+claude/.claude/rules/reading-large-files.md|.claude/rules/reading-large-files.md
+claude/.claude/rules/claude-md-edits.md|.claude/rules/claude-md-edits.md
+claude/.claude/rules/instruction-file-discipline.md|.claude/rules/instruction-file-discipline.md
+claude/.claude/rules/prose-budget.md|.claude/rules/prose-budget.md
+
+# --- global skills worth having in the cloud
+skills/impag|.claude/skills/impag
+skills/qimpag|.claude/skills/qimpag
+skills/systematic-debugging|.claude/skills/systematic-debugging
+skills/testing-anti-patterns|.claude/skills/testing-anti-patterns
+skills/brutal-honesty-review|.claude/skills/brutal-honesty-review
+skills/retro|.claude/skills/retro
