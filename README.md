@@ -23,7 +23,9 @@ _(Developers: jump to [Development](#development).)_
    Windows may warn that it is unsigned (More info → Run anyway); that is expected.
    If Windows blocks it outright (Smart App Control or your organisation's App Control): delete the
    folder, right-click the zip → Properties → tick **Unblock** → OK, extract again and double-click
-   `install.bat` instead. It does the same steps.
+   `install.bat` instead. It does the same steps. Use `install.bat` too if your antivirus quarantines
+   `Transcribe-Setup.exe`: it is a small unsigned exe that downloads and unpacks files, which heuristics
+   can mistake for malware.
 3. Start `Transcribe.lnk` in the folder (copy it to the Desktop if you like), or `Transcribe.bat` if
    `install.bat` says so. After moving the folder,
    run the setup again to repair the shortcut.
