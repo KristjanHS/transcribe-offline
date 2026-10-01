@@ -1,0 +1,31 @@
+{
+    "version": "0.2.5",
+    "description": "Offline Estonian and English speech-to-text (faster-whisper, CPU). Downloads about 3.5 GB once, each file verified against a pinned SHA-256.",
+    "homepage": "https://github.com/KristjanHS/transcribe-offline",
+    "license": "MIT",
+    "url": "https://github.com/KristjanHS/transcribe-offline/releases/download/v0.2.5/transcribe-offline-v0.2.5.zip",
+    "hash": "ee568f563437cecb52d681fb605e58acf7c296801fa462cbcc05c6fdfacf39a7",
+    "extract_dir": "transcribe-offline-v0.2.5",
+    "installer": {
+        "script": [
+            "$env:CI = '1'",
+            "& \"$dir\\Transcribe-Setup.exe\"",
+            "if ($LASTEXITCODE) { error 'Transcribe-Setup.exe failed; run scoop install again to resume.' }"
+        ]
+    },
+    "shortcuts": [
+        [
+            "Transcribe.bat",
+            "Transcribe Offline"
+        ]
+    ],
+    "persist": "app\\models",
+    "checkver": "github",
+    "autoupdate": {
+        "url": "https://github.com/KristjanHS/transcribe-offline/releases/download/v$version/transcribe-offline-v$version.zip",
+        "extract_dir": "transcribe-offline-v$version",
+        "hash": {
+            "url": "$baseurl/SHA256SUMS"
+        }
+    }
+}
