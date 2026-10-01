@@ -8,10 +8,8 @@ NestedInstallerType: portable
 NestedInstallerFiles:
 - RelativeFilePath: transcribe-offline-v0.2.6\Transcribe-Setup.exe
   PortableCommandAlias: transcribe-offline-setup
-Scope: user
 MinimumOSVersion: 10.0.17134.0
 ReleaseDate: 2026-10-01
-DownloadCommandProhibited: true
 Installers:
 - Architecture: x64
   InstallerUrl: https://github.com/KristjanHS/transcribe-offline/releases/download/v0.2.6/transcribe-offline-v0.2.6.zip
