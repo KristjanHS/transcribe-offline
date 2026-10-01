@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
+# Per release: PackageVersion, ReleaseDate, the version folder in RelativeFilePath, InstallerUrl and
+# InstallerSha256 (the zip's line in the release's SHA256SUMS), then submit the three files to microsoft/winget-pkgs.
+PackageIdentifier: KristjanHS.TranscribeOffline
+PackageVersion: 0.2.6
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+- RelativeFilePath: transcribe-offline-v0.2.6\Transcribe-Setup.exe
+  PortableCommandAlias: transcribe-offline-setup
+Scope: user
+MinimumOSVersion: 10.0.17134.0
+ReleaseDate: 2026-10-01
+DownloadCommandProhibited: true
+Installers:
+- Architecture: x64
+  InstallerUrl: https://github.com/KristjanHS/transcribe-offline/releases/download/v0.2.6/transcribe-offline-v0.2.6.zip
+  InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000
+ManifestType: installer
+ManifestVersion: 1.12.0

@@ -1,6 +1,6 @@
 # Trust without a code-signing certificate
 
-Status: LIVE · 2026-10-01
+Status: ✅ SHIPPED 2026-10-01 (Stages 1–3 on main; winget submission waits for v0.2.6)
 
 Goal: fewer "Windows protected your PC" prompts for Transcribe-Setup.exe without buying a certificate.
 SmartScreen reputation is per file hash and builds only from clean downloads (no consumer submission
