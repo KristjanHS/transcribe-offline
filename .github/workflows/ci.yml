@@ -38,7 +38,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /optimize+ /warnaserror+ /win32manifest:..\installer\Setup.manifest /out:"$env:RUNNER_TEMP\Transcribe-Setup.exe" ..\installer\Setup.cs
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /optimize+ /warnaserror+ /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /win32manifest:..\installer\Setup.manifest /out:"$env:RUNNER_TEMP\Transcribe-Setup.exe" ..\installer\Setup.cs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: pip-audit on the locked runtime deps
         if: runner.os == 'Linux'

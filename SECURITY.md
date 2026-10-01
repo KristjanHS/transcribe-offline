@@ -2,7 +2,7 @@
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU. The whole app is
 654 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
-(`installer/Setup.cs`, 162 lines, built into `Transcribe-Setup.exe`) and its fallback `install.bat`,
+(`installer/Setup.cs`, 181 lines, built into `Transcribe-Setup.exe`) and its fallback `install.bat`,
 written to be read in full.
 
 ## What it does
