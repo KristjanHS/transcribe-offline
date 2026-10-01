@@ -6,13 +6,11 @@
     "url": "https://github.com/KristjanHS/transcribe-offline/releases/download/v0.2.5/transcribe-offline-v0.2.5.zip",
     "hash": "ee568f563437cecb52d681fb605e58acf7c296801fa462cbcc05c6fdfacf39a7",
     "extract_dir": "transcribe-offline-v0.2.5",
-    "installer": {
-        "script": [
-            "$env:CI = '1'",
-            "& \"$dir\\Transcribe-Setup.exe\"",
-            "if ($LASTEXITCODE) { error 'Transcribe-Setup.exe failed; run scoop install again to resume.' }"
-        ]
-    },
+    "post_install": [
+        "$env:CI = '1'",
+        "& \"$dir\\Transcribe-Setup.exe\"",
+        "if ($LASTEXITCODE) { abort 'Transcribe-Setup.exe failed (see above). Fix the network, then: scoop uninstall transcribe-offline; scoop install <this manifest URL>' }"
+    ],
     "shortcuts": [
         [
             "Transcribe.bat",

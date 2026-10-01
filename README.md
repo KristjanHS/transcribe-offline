@@ -31,7 +31,7 @@ _(Developers: jump to [Development](#development).)_
 
 With [Scoop](https://scoop.sh) instead (no SmartScreen prompt, since Scoop downloads without the browser's
 Mark of the Web): `scoop install https://raw.githubusercontent.com/KristjanHS/transcribe-offline/main/scoop/transcribe-offline.json`
-runs the same setup and adds a Start-menu shortcut; `scoop update transcribe-offline` keeps `app\models`.
+runs the same setup and adds a Start-menu shortcut; `scoop update transcribe-offline` keeps the downloaded models.
 
 Pick audio files, choose the language, press Start. Each `.txt` is saved beside its audio file, so in a
 OneDrive-synced or shared folder it is synced or shared too.
