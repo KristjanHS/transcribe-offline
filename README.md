@@ -26,9 +26,8 @@ _(Developers: jump to [Development](#development).)_
    `install.bat` instead. It does the same steps. Use `install.bat` too if your antivirus quarantines
    `Transcribe-Setup.exe`: it is a small unsigned exe that downloads and unpacks files, which heuristics
    can mistake for malware.
-3. Start `Transcribe.lnk` in the folder (copy it to the Desktop if you like), or `Transcribe.bat` if
-   `install.bat` says so. After moving the folder,
-   run the setup again to repair the shortcut.
+3. Start `Transcribe.bat` in the folder (make a shortcut to it on the Desktop if you like). After moving
+   the folder, run the setup again.
 
 Pick audio files, choose the language, press Start. Each `.txt` is saved beside its audio file, so in a
 OneDrive-synced or shared folder it is synced or shared too.

@@ -58,24 +58,15 @@ echo Installing Python %PYTHON_VERSION% and the locked dependencies ...
 echo Downloading and verifying the models (about 3 GB) ...
 ".venv\Scripts\python.exe" -m transcribe_offline.setup || goto :fail
 
-rem Made here, so it carries no Mark of the Web; its working directory makes the package importable.
-echo Creating Transcribe.lnk ...
-set "LNK=%~dp0Transcribe.lnk"
-set "APP=%CD%"
-"%SYS%\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -Command "$l = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK); $l.TargetPath = Join-Path $env:APP '.venv\Scripts\pythonw.exe'; $l.Arguments = '-m transcribe_offline'; $l.WorkingDirectory = $env:APP; $l.Save()" || (
-    rem PowerShell's ConstrainedLanguage mode (App Control) refuses WScript.Shell: write a launcher instead.
-    > "%~dp0Transcribe.bat" (
-        echo @cd /d "%%~dp0app"
-        echo @start "" ".venv\Scripts\pythonw.exe" -m transcribe_offline
-    )
-    echo.
-    echo Done. Start the app with Transcribe.bat in this folder.
-    goto :done
+rem Made here, so it carries no Mark of the Web; it starts the app from app\ so the package is importable.
+echo Creating Transcribe.bat ...
+> "%~dp0Transcribe.bat" (
+    echo @cd /d "%%~dp0app"
+    echo @start "" ".venv\Scripts\pythonw.exe" -m transcribe_offline
 )
 
 echo.
-echo Done. Start the app with Transcribe.lnk in this folder.
-:done
+echo Done. Start the app with Transcribe.bat in this folder.
 if not defined CI pause
 exit /b 0
 

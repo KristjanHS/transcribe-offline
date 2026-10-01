@@ -1,23 +1,26 @@
 // Transcribe-Setup.exe: the same steps as install.bat, with the pins read from pins.txt beside the exe.
 // Its logic stays fixed so its hash (and Windows reputation) carries over between releases; the pins change.
 // Built by release.yml with the in-box .NET Framework 4.8 csc.exe, so the source is C# 5.
+// It downloads and unzips in managed code and starts only uv and Python: a small unsigned exe that spawns
+// curl.exe and tar.exe, or drives WScript.Shell, matches antivirus heuristics for a downloader.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 
-// Identifies the exe in Properties > Details (csc turns these into its version resource). An anonymous
-// .NET exe that spawns curl and tar scores as a downloader with antivirus heuristics; a described one less so.
+// Identifies the exe in Properties > Details (csc turns these into its version resource).
 // The version is the installer's own, not the app's: it changes only with this file (see release.yml).
 [assembly: AssemblyTitle("Transcribe Offline setup")]
 [assembly: AssemblyDescription("Installs Transcribe Offline into the folder it is run from, verifying every download against the hashes in pins.txt.")]
 [assembly: AssemblyProduct("Transcribe Offline")]
 [assembly: AssemblyCompany("https://github.com/KristjanHS/transcribe-offline")]
 [assembly: AssemblyCopyright("MIT License")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 static class Setup
 {
@@ -30,12 +33,14 @@ static class Setup
         "UV_FIND_LINKS", "UV_INSECURE_HOST", "SSL_CERT_FILE", "SSL_CERT_DIR",
     };
 
+    // Written by install.bat too; its %~dp0 makes it relocatable, its working directory makes the package importable.
+    const string Launcher = "@cd /d \"%~dp0app\"\r\n@start \"\" \".venv\\Scripts\\pythonw.exe\" -m transcribe_offline\r\n";
+
     class Fail : Exception
     {
         public Fail(string message) : base(message) { }
     }
 
-    [STAThread]
     static int Main()
     {
         int code = 1;
@@ -44,11 +49,11 @@ static class Setup
             Install(AppDomain.CurrentDomain.BaseDirectory);
             code = 0;
             Console.WriteLine();
-            Console.WriteLine("Done. Start the app with Transcribe.lnk in this folder.");
+            Console.WriteLine("Done. Start the app with Transcribe.bat in this folder.");
         }
         catch (Exception e)
         {
-            Console.WriteLine((e.InnerException ?? e).Message);  // COM errors arrive wrapped
+            Console.WriteLine((e.InnerException ?? e).Message);  // download errors arrive wrapped
             Console.WriteLine();
             Console.WriteLine("Installation failed - see the message above. Running Transcribe-Setup.exe again resumes.");
         }
@@ -67,7 +72,6 @@ static class Setup
         if (!File.Exists(pinsFile) || !Directory.Exists(app))
             throw new Fail("Extract the whole zip first and run Transcribe-Setup.exe from the extracted folder.");
         Dictionary<string, string> pins = ReadPins(pinsFile);
-        string sys = Path.Combine(Environment.GetEnvironmentVariable("SystemRoot"), "System32");
         string uvDir = Path.Combine(app, ".uv");
         string uvExe = Path.Combine(uvDir, "uv.exe");
         string tmp = Path.Combine(uvDir, "tmp");
@@ -92,16 +96,14 @@ static class Setup
         {
             Console.WriteLine("Downloading uv " + pins["UV_VERSION"] + " ...");
             string zip = Path.Combine(uvDir, "uv.zip");
-            string url = "https://github.com/astral-sh/uv/releases/download/" + pins["UV_VERSION"]
-                + "/uv-x86_64-pc-windows-msvc.zip";
-            // Relative to app\ as in install.bat, so curl and tar never see a non-ASCII folder name.
-            Run(Path.Combine(sys, "curl.exe"), @"-fL -o .uv\uv.zip " + Quote(url), app);
+            Download("https://github.com/astral-sh/uv/releases/download/" + pins["UV_VERSION"]
+                + "/uv-x86_64-pc-windows-msvc.zip", zip);
             if (!HashIs(zip, pins["UV_SHA256"]))
             {
                 File.Delete(zip);
                 throw new Fail("The uv download does not match the pinned SHA-256.\nExpected: " + pins["UV_SHA256"]);
             }
-            Run(Path.Combine(sys, "tar.exe"), @"-xf .uv\uv.zip -C .uv", app);
+            Unzip(zip, uvDir);
             File.Delete(zip);
         }
         if (!HashIs(uvExe, pins["UV_EXE_SHA256"])) throw new Fail("uv.exe does not match the pinned SHA-256.");
@@ -112,9 +114,9 @@ static class Setup
         Console.WriteLine("Downloading and verifying the models (about 3 GB) ...");
         Run(Path.Combine(app, @".venv\Scripts\python.exe"), "-m transcribe_offline.setup", app);
 
-        // Made here, so it carries no Mark of the Web; its working directory makes the package importable.
-        Console.WriteLine("Creating Transcribe.lnk ...");
-        CreateShortcut(Path.Combine(root, "Transcribe.lnk"), Path.Combine(app, @".venv\Scripts\pythonw.exe"), app);
+        // Made here, so it carries no Mark of the Web.
+        Console.WriteLine("Creating Transcribe.bat ...");
+        File.WriteAllText(Path.Combine(root, "Transcribe.bat"), Launcher);
     }
 
     // Only the four pin keys are taken; any other line is ignored (as in install.bat).
@@ -144,9 +146,26 @@ static class Setup
         }
     }
 
-    static string Quote(string arg)
+    // Windows' own TLS stack and certificate store (as curl.exe in install.bat); redirects are followed.
+    static void Download(string url, string path)
     {
-        return "\"" + arg + "\"";
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+        using (var client = new WebClient())
+        {
+            client.Headers[HttpRequestHeader.UserAgent] = "Transcribe-Setup";
+            client.DownloadFile(url, path);
+        }
+    }
+
+    // Each entry is written under its bare file name, so no entry path can escape the folder.
+    static void Unzip(string zip, string dir)
+    {
+        using (ZipArchive archive = ZipFile.OpenRead(zip))
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                string name = Path.GetFileName(entry.FullName);
+                if (name.Length > 0) entry.ExtractToFile(Path.Combine(dir, name), true);
+            }
     }
 
     static void Run(string exe, string args, string workingDirectory)
@@ -158,17 +177,5 @@ static class Setup
             if (process.ExitCode != 0)
                 throw new Fail(Path.GetFileName(exe) + " failed with exit code " + process.ExitCode + ".");
         }
-    }
-
-    static void CreateShortcut(string lnk, string target, string workingDirectory)
-    {
-        Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-        object shell = Activator.CreateInstance(shellType);
-        object link = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { lnk });
-        Type linkType = link.GetType();
-        linkType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, link, new object[] { target });
-        linkType.InvokeMember("Arguments", BindingFlags.SetProperty, null, link, new object[] { "-m transcribe_offline" });
-        linkType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, link, new object[] { workingDirectory });
-        linkType.InvokeMember("Save", BindingFlags.InvokeMethod, null, link, null);
     }
 }
