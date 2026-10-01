@@ -10,7 +10,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 // Identifies the exe in Properties > Details (csc turns these into its version resource).
 // The version is the installer's own, not the app's: it changes only with this file (see release.yml).
@@ -19,8 +22,8 @@ using System.Security.Cryptography;
 [assembly: AssemblyProduct("Transcribe Offline")]
 [assembly: AssemblyCompany("https://github.com/KristjanHS/transcribe-offline")]
 [assembly: AssemblyCopyright("MIT License")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 static class Setup
 {
@@ -46,10 +49,11 @@ static class Setup
         int code = 1;
         try
         {
-            Install(AppDomain.CurrentDomain.BaseDirectory);
+            string root = InstallRoot();
+            Install(root);
             code = 0;
             Console.WriteLine();
-            Console.WriteLine("Done. Start the app with Transcribe.bat in this folder.");
+            Console.WriteLine("Done. Start the app with Transcribe.bat in " + root);
         }
         catch (Exception e)
         {
@@ -64,6 +68,25 @@ static class Setup
         }
         return code;
     }
+
+    // The folder of the exe itself, also when started through a symlink (winget's Links folder).
+    static string InstallRoot()
+    {
+        using (FileStream stream = File.OpenRead(Process.GetCurrentProcess().MainModule.FileName))
+        {
+            var path = new StringBuilder(32768);
+            int length = GetFinalPathNameByHandle(stream.SafeFileHandle, path, path.Capacity, 0);
+            if (length <= 0 || length > path.Capacity) throw new Fail("Cannot resolve the path of Transcribe-Setup.exe.");
+            string exe = path.ToString();
+            if (exe.StartsWith(@"\\?\UNC\")) exe = @"\\" + exe.Substring(8);
+            else if (exe.StartsWith(@"\\?\")) exe = exe.Substring(4);
+            if (!Path.IsPathRooted(exe) || exe.StartsWith("Volume{")) throw new Fail("Unsupported install path: " + exe);
+            return Path.GetDirectoryName(exe);
+        }
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern int GetFinalPathNameByHandle(SafeFileHandle file, StringBuilder path, int capacity, int flags);
 
     static void Install(string root)
     {

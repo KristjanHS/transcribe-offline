@@ -37,7 +37,7 @@ jobs:
       - name: Reminder for a rebuilt exe
         if: env.REBUILD == 'true'
         shell: pwsh
-        run: Add-Content $env:GITHUB_STEP_SUMMARY "Rebuilt Transcribe-Setup.exe (new hash). After publishing, submit it at https://www.microsoft.com/en-us/wdsi/filesubmission (Software developer, Microsoft Defender SmartScreen, Incorrectly detected)."
+        run: Add-Content $env:GITHUB_STEP_SUMMARY "Rebuilt Transcribe-Setup.exe (new hash), so its SmartScreen reputation restarts from zero. Reputation comes only from clean downloads over weeks; Microsoft has no consumer submission route (https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation). Avoid touching installer/ again soon."
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Transcribe-Setup
@@ -71,9 +71,12 @@ jobs:
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
           }
           New-Item -ItemType File "$env:RUNNER_TEMP\install-t0" | Out-Null
-      - name: Transcribe-Setup.exe end to end, as tuser
+      - name: Transcribe-Setup.exe end to end, as tuser, through a symlink in another folder (as winget starts portables)
         shell: pwsh
-        run: .github\scripts\as-standard-user.ps1 "$PWD\Transcribe-Setup.exe"
+        run: |
+          New-Item -ItemType Directory "$PWD\Links" | Out-Null
+          $link = New-Item -ItemType SymbolicLink -Path "$PWD\Links\Transcribe-Setup.exe" -Target "$PWD\Transcribe-Setup.exe"
+          .github\scripts\as-standard-user.ps1 $link.FullName
       - &launcher
         name: Transcribe.bat starts the venv's pythonw.exe from app\
         shell: pwsh
