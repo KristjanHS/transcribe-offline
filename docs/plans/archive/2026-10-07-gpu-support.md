@@ -1,6 +1,6 @@
 # GPU support (NVIDIA, Windows): detect at install, CPU fallback at runtime
 
-**Status:** slices 1–5 shipped on `main` (2026-10-07); slice 6 (owner host) and 7 (release) owed. Asked for explicitly on 2026-10-07, so invariant 4 ("minimal by default") is satisfied by that request. It reverses part of the archived design's decision #2 ("CPU only"; see `archive/2026-09-27-transcribe-offline-minimal-app-design.md:16,102,219`).
+**Status:** ✅ SHIPPED to `main` 2026-10-07 (slices 1–5); owner-host checklist (slice 6) and release v0.2.7 (slice 7) owed by the user. Asked for explicitly on 2026-10-07, so invariant 4 ("minimal by default") is satisfied by that request. It reverses part of the archived design's decision #2 ("CPU only"; see `archive/2026-09-27-transcribe-offline-minimal-app-design.md:16,102,219`).
 
 **Provenance:** this app never had GPU support. The GPU code lives in stt-faster, and the original rewrite left it out to keep the review surface small. This plan ports stt-faster's Windows GPU mode (`installer/setup_gui.py`, `backend/_cudnn_preload.py`, `backend/model_loader.py`, `backend/gui.py`) rather than inventing a new one. Each section below names the stt-faster lines it copies.
 
