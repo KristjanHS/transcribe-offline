@@ -85,6 +85,22 @@ def test_run_job_after_a_gpu_success_reports_failures_without_fallback(tmp_path:
     assert fake.devices == ["cuda"]
 
 
+def test_run_job_does_not_blame_the_gpu_for_a_file_error(tmp_path: Path) -> None:
+    fake = FakeEngine("never")
+
+    def transcribe(model: FakeModel, audio: Path, language: str, **kw: Any) -> Path:
+        if audio.name == "a.wav":
+            raise FileNotFoundError(audio)
+        return fake.transcribe(model, audio, language, **kw)
+
+    events: queue.Queue[app.Event] = queue.Queue()
+    files = [tmp_path / "a.wav", tmp_path / "b.wav"]
+    app.run_job(files, "et", True, events, threading.Event(), tmp_path, fake.load, transcribe)
+    got = [events.get_nowait() for _ in range(events.qsize())]
+    assert [e.kind for e in got] == ["started", "failed", "started", "done", "finished"]
+    assert fake.devices == ["cuda"]
+
+
 def test_seconds_left_waits_for_a_meaningful_rate() -> None:
     assert app.seconds_left(0.5, 1.0) is None
     assert app.seconds_left(0.0, 60.0) is None

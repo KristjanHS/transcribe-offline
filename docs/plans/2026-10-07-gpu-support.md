@@ -1,6 +1,6 @@
 # GPU support (NVIDIA, Windows): detect at install, CPU fallback at runtime
 
-**Status:** plan only, nothing implemented yet. Asked for explicitly on 2026-10-07, so invariant 4 ("minimal by default") is satisfied by that request. It reverses part of the archived design's decision #2 ("CPU only"; see `archive/2026-09-27-transcribe-offline-minimal-app-design.md:16,102,219`).
+**Status:** slices 1–5 shipped on `main` (2026-10-07); slice 6 (owner host) and 7 (release) owed. Asked for explicitly on 2026-10-07, so invariant 4 ("minimal by default") is satisfied by that request. It reverses part of the archived design's decision #2 ("CPU only"; see `archive/2026-09-27-transcribe-offline-minimal-app-design.md:16,102,219`).
 
 **Provenance:** this app never had GPU support. The GPU code lives in stt-faster, and the original rewrite left it out to keep the review surface small. This plan ports stt-faster's Windows GPU mode (`installer/setup_gui.py`, `backend/_cudnn_preload.py`, `backend/model_loader.py`, `backend/gui.py`) rather than inventing a new one. Each section below names the stt-faster lines it copies.
 
@@ -15,13 +15,13 @@
 ### D1. Detection: stt-faster's rule, unchanged
 `setup_gui.py:62-67, 666-683`:
 - Run `%SystemRoot%\System32\nvidia-smi.exe --query-gpu=name,memory.total,driver_version --format=csv,noheader,nounits`. Use the absolute path, so a same-named exe on PATH is never run. The timeout is 15 s.
-- Parse only the first line, with `rsplit(",", 2)`, because GPU names can contain commas.
-- The GPU is capable when **driver ≥ 528.33** (the CUDA 12.0 floor on Windows) **and VRAM ≥ 4000 MiB**.
+- Parse only the first line, with `rsplit(",", 3)` (the query also asks `compute_cap`), because GPU names can contain commas.
+- The GPU is capable when **driver ≥ 528.33** (the CUDA 12.0 floor on Windows), **VRAM ≥ 4000 MiB** **and `compute_cap` ≥ 7.0** (ctranslate2 refuses `float16` on Pascal and older; added after review).
 - Any doubt (tool missing, non-zero exit, `[N/A]`, a parse error, a timeout) means **CPU**.
 - Not ported: WMI queries, CUDA toolkit checks, the NVSMI legacy path. Old non-DCH drivers fall below the 528 floor anyway.
 
 ### D2. Where detection runs: `setup.py`, not `Setup.cs` or `install.bat` (user ruling 2026-10-07)
-Both installers already run `python -m transcribe_offline.setup` right after `uv sync`. That module becomes the place that detects the GPU. If the GPU is capable, it runs one more sync, `app/.uv/uv.exe sync --frozen --no-dev --group gpu`, before it downloads the models.
+Both installers already run `python -m transcribe_offline.setup` right after `uv sync`. That module becomes the place that detects the GPU. If the GPU is capable, it runs one more sync, `app/.uv/uv.exe sync --frozen --no-dev --group gpu --python <running 3.12.x>` (pinned so an inherited `UV_PYTHON` cannot recreate `.venv`), before it downloads the models.
 
 - **What this buys:**
   - **`installer/Setup.cs` and `install.bat` stay byte-identical.** The Setup.exe hash, and the SmartScreen reputation it has built up, carry over (`.claude/rules/installer-hash.md`).
@@ -68,7 +68,7 @@ gpu = [
 - **Why the retry covers the first inference too:** CUDA DLLs load lazily, so a missing or broken cuBLAS often fails at the **first inference**, not at model load (stt-faster design §135). Catching errors only at load time is not enough.
 - **In `app.run_job`:**
   - If `load_model` on `cuda` raises, reload on CPU.
-  - If the first `transcribe_file` on a `cuda` model raises something other than `Cancelled`, log it, reload on CPU, and retry that file once.
+  - Until one file has transcribed on `cuda`, a `RuntimeError` (how ctranslate2 reports CUDA errors; file errors do not count) reloads on CPU and retries that file once.
   - Stay on CPU for the rest of the session.
   - `transcribe_file` already deletes its `.partial` on any exception, so the retry starts clean.
 - **Not ported:** stt-faster's "write `device=cpu` to config after a successful CPU retry" (`gui.py:437-478`). Without persistence, a broken GPU costs one failed attempt per app launch. That is an accepted trade for having no config file.

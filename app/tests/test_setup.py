@@ -1,5 +1,6 @@
 import hashlib
 import io
+import sys
 from pathlib import Path
 from typing import IO, Any
 
@@ -70,17 +71,24 @@ class FakeRun:
 
 
 def test_detect_gpu_reads_first_gpu_from_system32_nvidia_smi() -> None:
-    run = FakeRun("NVIDIA GeForce RTX 3060, Laptop, 12288, 560.94\nTesla T4, 15360, 560.94\n")
+    run = FakeRun(
+        "NVIDIA GeForce RTX 3060, Laptop, 12288, 560.94, 8.6\nTesla T4, 15360, 560.94, 7.5\n"
+    )
     info = setup.detect_gpu({"SystemRoot": "D:\\Win"}, run=run)
-    assert info == setup.GpuInfo("NVIDIA GeForce RTX 3060, Laptop", 12288, (560, 94))
+    assert info == setup.GpuInfo("NVIDIA GeForce RTX 3060, Laptop", 12288, (560, 94), (8, 6))
     assert run.cmd[0].startswith("D:\\Win") and run.cmd[0].endswith("nvidia-smi.exe")
     assert str(info) == "NVIDIA GeForce RTX 3060, Laptop (12 GB, driver 560.94)"
 
 
 @pytest.mark.parametrize(
     ("stdout", "returncode"),
-    [("", 0), ("RTX 3060, [N/A], 560.94\n", 0), ("RTX 3060, 12288, 560.94\n", 9)],
-    ids=["no-output", "unparsable", "exit-code"],
+    [
+        ("", 0),
+        ("RTX 3060, [N/A], 560.94, 8.6\n", 0),
+        ("RTX 3060, 12288, 560.94\n", 0),  # a driver without the compute_cap field
+        ("RTX 3060, 12288, 560.94, 8.6\n", 9),
+    ],
+    ids=["no-output", "unparsable", "no-compute-cap", "exit-code"],
 )
 def test_detect_gpu_any_doubt_is_none(stdout: str, returncode: int) -> None:
     assert setup.detect_gpu({}, run=FakeRun(stdout, returncode)) is None
@@ -96,9 +104,13 @@ def test_detect_gpu_missing_tool_is_none() -> None:
 @pytest.mark.parametrize(
     ("info", "capable"),
     [
-        (setup.GpuInfo("RTX 3050", 4096, (528, 33)), True),
-        (setup.GpuInfo("RTX 3050", 4096, (528, 24)), False),  # below the CUDA 12 driver floor
-        (setup.GpuInfo("GTX 1050", 3072, (560, 94)), False),  # too little VRAM
+        (setup.GpuInfo("RTX 3050", 4096, (528, 33), (8, 6)), True),
+        (
+            setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)),
+            False,
+        ),  # below the CUDA 12 driver floor
+        (setup.GpuInfo("GTX 1050", 3072, (560, 94), (6, 1)), False),  # too little VRAM
+        (setup.GpuInfo("GTX 1070", 8192, (560, 94), (6, 1)), False),  # Pascal: no float16
         (None, False),
     ],
 )
@@ -116,6 +128,8 @@ def test_sync_gpu_group_runs_bundled_uv_frozen(tmp_path: Path) -> None:
         "--no-dev",
         "--group",
         "gpu",
+        "--python",
+        "{}.{}.{}".format(*sys.version_info[:3]),
     ]
     assert run.kwargs["cwd"] == tmp_path
 
@@ -124,11 +138,11 @@ def fail_fetch(url: str) -> IO[bytes]:
     raise OSError("offline")
 
 
-def test_main_capable_gpu_syncs_before_models_and_stops_if_sync_fails() -> None:
+def test_main_capable_gpu_syncs_before_models_and_stops_if_sync_fails(tmp_path: Path) -> None:
     def gpu() -> setup.GpuInfo:
-        return setup.GpuInfo("RTX 3060", 12288, (560, 94))
+        return setup.GpuInfo("RTX 3060", 12288, (560, 94), (8, 6))
 
-    assert setup.main(fetch=refuse, detect=gpu, sync=lambda: False) == 1
+    assert setup.main(tmp_path, refuse, detect=gpu, sync=lambda: False) == 1
 
 
 def test_main_without_gpu_skips_sync(tmp_path: Path) -> None:

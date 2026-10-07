@@ -78,9 +78,7 @@ def run_job(
         try:
             try:
                 txt = run(model, audio)
-            except (engine.Cancelled, engine.UnsupportedAudioError):
-                raise
-            except Exception:
+            except RuntimeError:  # how ctranslate2 reports CUDA/cuBLAS/out-of-memory errors
                 if not gpu_unproven:
                     raise
                 log.exception("Transcription on the GPU failed; retrying on the CPU")

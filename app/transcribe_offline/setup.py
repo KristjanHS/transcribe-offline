@@ -29,6 +29,7 @@ LOG_EVERY = 100 << 20
 
 MIN_GPU_DRIVER = (528, 33)  # CUDA 12.0 on Windows
 MIN_GPU_VRAM_MIB = 4000
+MIN_GPU_COMPUTE = (7, 0)  # ctranslate2 runs float16 on CUDA only from Volta on
 
 Fetch = Callable[[str], IO[bytes]]
 Run = Callable[..., Any]
@@ -43,6 +44,7 @@ class GpuInfo:
     name: str
     vram_mib: int
     driver: tuple[int, ...]
+    compute: tuple[int, ...]
 
     def __str__(self) -> str:
         driver = ".".join(map(str, self.driver))
@@ -53,25 +55,47 @@ def detect_gpu(env: Mapping[str, str] = os.environ, run: Run = subprocess.run) -
     """First GPU from nvidia-smi (ships with every NVIDIA driver); None on any doubt."""
     cmd = [
         str(Path(env.get("SystemRoot", "C:\\Windows"), "System32", "nvidia-smi.exe")),
-        "--query-gpu=name,memory.total,driver_version",
+        "--query-gpu=name,memory.total,driver_version,compute_cap",
         "--format=csv,noheader,nounits",
     ]
     try:
         result = run(cmd, capture_output=True, text=True, timeout=15, check=False)
-        name, vram, driver = (part.strip() for part in result.stdout.splitlines()[0].rsplit(",", 2))
-        info = GpuInfo(name, int(float(vram)), tuple(int(n) for n in driver.split(".")))
+        line = result.stdout.splitlines()[0]
+        name, vram, driver, compute = (part.strip() for part in line.rsplit(",", 3))
+        info = GpuInfo(name, int(float(vram)), version(driver), version(compute))
     except (OSError, subprocess.SubprocessError, IndexError, ValueError):
         return None
     return info if result.returncode == 0 else None
 
 
+def version(text: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in text.split("."))
+
+
 def gpu_capable(info: GpuInfo | None) -> bool:
-    return info is not None and info.vram_mib >= MIN_GPU_VRAM_MIB and info.driver >= MIN_GPU_DRIVER
+    return (
+        info is not None
+        and info.vram_mib >= MIN_GPU_VRAM_MIB
+        and info.driver >= MIN_GPU_DRIVER
+        and info.compute >= MIN_GPU_COMPUTE
+    )
 
 
 def sync_gpu_group(root: Path = APP_ROOT, run: Run = subprocess.run) -> bool:
     # The installer's environment (UV_* settings, cleared variables) is inherited unchanged.
-    cmd = [str(root / ".uv" / "uv.exe"), "sync", "--frozen", "--no-dev", "--group", "gpu"]
+    python = "{}.{}.{}".format(
+        *sys.version_info[:3]
+    )  # as the installer's sync, so UV_PYTHON can't recreate .venv
+    cmd = [
+        str(root / ".uv" / "uv.exe"),
+        "sync",
+        "--frozen",
+        "--no-dev",
+        "--group",
+        "gpu",
+        "--python",
+        python,
+    ]
     return run(cmd, cwd=root, check=False).returncode == 0
 
 
