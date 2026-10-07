@@ -70,6 +70,32 @@ Unlike the Windows setup, uv keeps its download cache and the Python it installs
 (`~/.cache/uv`, `~/.local/share/uv`). **Upgrade:** `git pull`, then the `uv sync` and setup lines again
 (setup keeps verified models). **Uninstall:** delete the folder (`uv cache clean` empties uv's cache).
 
+### Without the setup script
+
+`transcribe_offline.setup` is the only Python that touches the network or starts processes. To skip it,
+replace the `uv sync` and setup lines above with these steps, which you can read as you run them:
+
+1. GPU check (optional): `nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap --format=csv`.
+   Use the GPU only if it shows 4000 MiB+ of memory, driver 525.60.13+ and compute capability 7.0+.
+2. Libraries, in `app/`: `uv sync --frozen --no-dev`. On a capable GPU, add `--group gpu` (+1.3 GB).
+3. Models: run this in `app/`. The first command only prints the URLs and SHA-256 hashes pinned in
+   `transcribe_offline/models.py` (plain data, about 50 lines; read it first). `curl` downloads each file and
+   `sha256sum -c` checks it; a file that fails the check is deleted, so run the loop again.
+
+   ```sh
+   .venv/bin/python -c 'from transcribe_offline.models import MODELS
+   for lang, pin in MODELS.items():
+       for name, sha in pin.files.items(): print(pin.url(name), f"models/{lang}/{name}", sha)' |
+   while read -r url file sha; do
+       curl -fL --create-dirs -o "$file" "$url"
+       echo "$sha  $file" | sha256sum -c - || rm -f "$file"
+   done
+   ```
+
+   Without running any Python, copy each URL and hash from `models.py` yourself: the file URL is
+   `https://huggingface.co/<repo>/resolve/<commit>/<subfolder>/<name>` and it goes in `app/models/<et|en>/<name>`.
+   You need all five files for each language; the app refuses to start a language with any missing.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE).
