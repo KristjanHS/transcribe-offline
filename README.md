@@ -62,7 +62,7 @@ Each transcript is saved beside its audio as `.txt` and its path is printed; pro
 Ctrl+C (the unfinished transcript is removed). The same guard as on Windows blocks network, child
 processes and writes outside the folder at runtime; `./transcribe` runs the app's own Python, never uv.
 
-On an NVIDIA GPU (GTX 16 / RTX series or newer, 4 GB+ memory, driver 525.60.13+; WSL 2 works too) setup
+On an NVIDIA GPU (GTX 16 / RTX series or newer, 4 GB+ memory, driver 528.33+; WSL 2 works too) setup
 also installs 1.3 GB of CUDA libraries and `./transcribe` uses the GPU, falling back to the CPU if it fails.
 To stop using it, run `uv sync --frozen --no-dev` in `app/` (removes them; setup installs them again).
 
@@ -76,7 +76,7 @@ Unlike the Windows setup, uv keeps its download cache and the Python it installs
 replace the `uv sync` and setup lines above with these steps, which you can read as you run them:
 
 1. GPU check (optional): `nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap --format=csv`.
-   Use the GPU only if it shows 4000 MiB+ of memory, driver 525.60.13+ and compute capability 7.0+.
+   Use the GPU only if it shows 4000 MiB+ of memory, driver 528.33+ and compute capability 7.0+.
 2. Libraries, in `app/`: `uv sync --frozen --no-dev`. On a capable GPU, add `--group gpu` (+1.3 GB).
 3. Models: run this in `app/`. The first command only prints the URLs and SHA-256 hashes pinned in
    `transcribe_offline/models.py` (plain data, about 50 lines; read it first). `curl` downloads each file and

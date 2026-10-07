@@ -113,27 +113,18 @@ def test_detect_gpu_missing_tool_is_none() -> None:
 
 
 @pytest.mark.parametrize(
-    ("info", "platform", "capable"),
+    ("info", "capable"),
     [
-        (setup.GpuInfo("RTX 3050", 4096, (528, 33), (8, 6)), "win32", True),
-        (setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)), "win32", False),  # below CUDA 12
-        (
-            setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)),
-            "linux",
-            True,
-        ),  # Linux floor 525.60.13
-        (setup.GpuInfo("RTX 3050", 4096, (525, 53), (8, 6)), "linux", False),
-        (setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)), "wsl", False),  # Windows' driver
-        (setup.GpuInfo("GTX 1050", 3072, (560, 94), (6, 1)), "win32", False),  # too little VRAM
-        (setup.GpuInfo("GTX 1070", 8192, (560, 94), (6, 1)), "win32", False),  # Pascal: no float16
-        (None, "win32", False),
+        (setup.GpuInfo("RTX 3050", 4096, (528, 33), (8, 6)), True),
+        (setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)), False),  # below CUDA 12 on Windows
+        (setup.GpuInfo("RTX 3050", 4096, (525, 60, 13), (8, 6)), False),  # Linux CUDA 12 floor
+        (setup.GpuInfo("GTX 1050", 3072, (560, 94), (6, 1)), False),  # too little VRAM
+        (setup.GpuInfo("GTX 1070", 8192, (560, 94), (6, 1)), False),  # Pascal: no float16
+        (None, False),
     ],
 )
-def test_gpu_capable_needs_driver_and_vram(
-    info: setup.GpuInfo | None, platform: str, capable: bool
-) -> None:
-    env = {"WSL_DISTRO_NAME": "Ubuntu"} if platform == "wsl" else {}
-    assert setup.gpu_capable(info, "linux" if platform == "wsl" else platform, env) is capable
+def test_gpu_capable_needs_driver_and_vram(info: setup.GpuInfo | None, capable: bool) -> None:
+    assert setup.gpu_capable(info) is capable
 
 
 def test_sync_gpu_group_runs_bundled_uv_frozen(tmp_path: Path) -> None:

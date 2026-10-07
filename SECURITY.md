@@ -2,7 +2,7 @@
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU, or NVIDIA GPU
 when setup finds one. The whole app is
-820 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
+931 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
 (`installer/Setup.cs`, 181 lines, built into `Transcribe-Setup.exe`) and its fallback `install.bat`,
 written to be read in full.
 
@@ -83,7 +83,7 @@ Redirect hosts as observed with `curl -sI`; the hashes, not the hosts, are the i
 python-build-standalone's CDN host is whatever github.com redirects to (unverified until the first
 Windows run). `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
 variables that could redirect a download. Setup also runs `%SystemRoot%\System32\nvidia-smi.exe` (Linux: `/usr/bin/nvidia-smi`, on WSL
-`/usr/lib/wsl/lib/nvidia-smi`; a read-only GPU query) and, when it reports driver 528.33+ (Linux 525.60.13+), 4 GB+ and compute capability 7.0+, `uv sync --frozen --no-dev --group
+`/usr/lib/wsl/lib/nvidia-smi`; a read-only GPU query) and, when it reports driver 528.33+, 4 GB+ and compute capability 7.0+, `uv sync --frozen --no-dev --group
 gpu`: about 1.3 GB of NVIDIA wheels from PyPI, pinned by `app/uv.lock` like the rest. On Linux you can
 do the same steps yourself with `nvidia-smi`, `uv` and `curl` + `sha256sum` (README, "Without the setup script").
 
