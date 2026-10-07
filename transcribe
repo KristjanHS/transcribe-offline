@@ -1,0 +1,6 @@
+#!/bin/sh
+# Linux CLI: ./transcribe -l et|en [--no-timestamps] FILE...  (install steps: README)
+set -eu
+app="$(cd "$(dirname "$0")/app" && pwd)"
+# -P: never import from the working directory, only the app folder.
+PYTHONPATH="$app" exec "$app/.venv/bin/python" -P -m transcribe_offline "$@"

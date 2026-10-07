@@ -35,6 +35,7 @@ OPTIONS = {"protocol_whitelist": "file", "format_whitelist": FORMATS, "codec_whi
 SAMPLE_RATE = 16000
 
 LANGUAGES = {"Estonian": "et", "English": "en"}  # name -> language code = folder under models/
+SETUP = "Transcribe-Setup.exe" if sys.platform == "win32" else "python -m transcribe_offline.setup"
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ def load_model(
     missing = missing_files(path)
     if missing:
         names = ", ".join(missing)
-        raise ModelMissingError(f"Missing in {path}: {names}. Run Transcribe-Setup.exe.")
+        raise ModelMissingError(f"Missing in {path}: {names}. Run {SETUP}.")
     device, compute_type = pick_device(gpu, has_libraries, cuda_count)
     log.info("Loading the %s model on %s (%s)", language, device, compute_type)
     from faster_whisper import WhisperModel  # deferred: heavy import, only needed once a job starts

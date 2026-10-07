@@ -2,6 +2,7 @@
 pins.txt text eol=crlf
 # Bash scripts run on the Windows release runner too (core.autocrlf=true would add CRs).
 *.sh text eol=lf
+transcribe text eol=lf
 # The release zip holds only what the user runs: Transcribe-Setup.exe (added by release.yml),
 # install.bat, pins.txt, LICENSE, app/. The exe's source is proven by the build attestation.
 .claude/ export-ignore
@@ -12,4 +13,5 @@ app/tests/ export-ignore
 .gitattributes export-ignore
 .gitignore export-ignore
 Makefile export-ignore
+transcribe export-ignore
 *.md export-ignore

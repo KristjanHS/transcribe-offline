@@ -35,7 +35,7 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 |--------|---------|-------------|
 | Crafted audio file attacks FFmpeg | `engine.decode_audio`: `file` protocol only, 8 demuxers, audio-codec allow-list (FFmpeg's decoder whitelist, applied before any decoder runs) | unit tests |
 | A memory-corruption bug in FFmpeg or CTranslate2 (or cuBLAS/cuDNN on a GPU) | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
-| CUDA or cuDNN aborts the process (a native crash Python cannot catch) | none; Python-visible GPU errors fall back to the CPU (`app.run_job`); the user can delete `app\.venv\Lib\site-packages\nvidia` | fallback: unit tests; abort: not verified |
+| CUDA or cuDNN aborts the process (a native crash Python cannot catch) | none; Python-visible GPU errors fall back to the CPU (`job.run_job`); the user can delete `app\.venv\Lib\site-packages\nvidia` | fallback: unit tests; abort: not verified |
 | Our code opens a socket, starts a process or writes outside its folder | import ban (`TID251`, `test_imports.py`); runtime audit hook `guard.py` | static checks, unit tests, release smoke test |
 | Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; our code never passes Tcl text (no `.call`/`.eval`). The audit hook cannot see native code | Tcl: `test_imports.py`; FFmpeg, CTranslate2: not verified |
 | Install or app writes outside the folder | `Transcribe-Setup.exe` / `install.bat` point uv's cache, Python and temp files at `app\`; `guard.py` at runtime | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
