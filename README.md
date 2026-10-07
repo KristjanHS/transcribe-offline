@@ -62,6 +62,10 @@ Each transcript is saved beside its audio as `.txt` and its path is printed; pro
 Ctrl+C (the unfinished transcript is removed). The same guard as on Windows blocks network, child
 processes and writes outside the folder at runtime; `./transcribe` runs the app's own Python, never uv.
 
+On an NVIDIA GPU (GTX 16 / RTX series or newer, 4 GB+ memory, driver 525.60.13+; WSL 2 works too) setup
+also installs 1.3 GB of CUDA libraries and `./transcribe` uses the GPU, falling back to the CPU if it fails.
+To stop using it, run `uv sync --frozen --no-dev` in `app/` (removes them; setup installs them again).
+
 Unlike the Windows setup, uv keeps its download cache and the Python it installs in your home folder
 (`~/.cache/uv`, `~/.local/share/uv`). **Upgrade:** `git pull`, then the `uv sync` and setup lines again
 (setup keeps verified models). **Uninstall:** delete the folder (`uv cache clean` empties uv's cache).

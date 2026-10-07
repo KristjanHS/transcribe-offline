@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import queue
+import signal
 import sys
 import threading
 from collections.abc import Callable, Sequence
@@ -45,23 +46,21 @@ def main(
     cancel = threading.Event()
     timestamps = not args.no_timestamps
     worker = threading.Thread(target=job, args=(files, args.language, timestamps, events, cancel))
-    worker.daemon = True
-    worker.start()
-    while True:
-        try:
-            ev = events.get()
-        except KeyboardInterrupt:  # the worker removes the .partial, then reports finished
-            cancel.set()
-            continue
-        if ev.kind == "started":
-            log.info("File %d of %d: %s", ev.index + 1, len(files), ev.text)
-        elif ev.kind == "done":
-            out.write(ev.text + "\n")
-        elif ev.kind == "failed":
-            failures.append(ev.text)
-        elif ev.kind == "finished":
-            break
-    worker.join()  # the model is freed on the worker; exiting first aborts in CTranslate2
+    # Ctrl+C only cancels: the worker removes the .partial and frees the model before we exit.
+    previous = signal.signal(signal.SIGINT, lambda *_: cancel.set())
+    try:
+        if files:  # no model load when nothing is audio
+            worker.start()
+            while (ev := events.get()).kind != "finished":
+                if ev.kind == "started":
+                    log.info("File %d of %d: %s", ev.index + 1, len(files), ev.text)
+                elif ev.kind == "done":
+                    out.write(ev.text + "\n")
+                elif ev.kind == "failed":
+                    failures.append(ev.text)
+            worker.join()  # the model is freed on the worker; exiting first aborts in CTranslate2
+    finally:
+        signal.signal(signal.SIGINT, previous)
     for failure in failures:
         log.error("Failed: %s", failure)
     if cancel.is_set():

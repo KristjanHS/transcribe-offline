@@ -35,6 +35,7 @@ ALLOWED = {
     "os",
     "pathlib",
     "queue",
+    "signal",
     "sys",
     "threading",
     "time",
