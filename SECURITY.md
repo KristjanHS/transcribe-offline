@@ -84,7 +84,8 @@ python-build-standalone's CDN host is whatever github.com redirects to (unverifi
 Windows run). `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
 variables that could redirect a download. Setup also runs `%SystemRoot%\System32\nvidia-smi.exe` (Linux: `/usr/bin/nvidia-smi`, on WSL
 `/usr/lib/wsl/lib/nvidia-smi`; a read-only GPU query) and, when it reports driver 528.33+ (Linux 525.60.13+), 4 GB+ and compute capability 7.0+, `uv sync --frozen --no-dev --group
-gpu`: about 1.3 GB of NVIDIA wheels from PyPI, pinned by `app/uv.lock` like the rest.
+gpu`: about 1.3 GB of NVIDIA wheels from PyPI, pinned by `app/uv.lock` like the rest. On Linux you can
+do the same steps yourself with `nvidia-smi`, `uv` and `curl` + `sha256sum` (README, "Without the setup script").
 
 Trust chain: release zip (provenance attestation; the exe inside also carries the attestation of the
 run that compiled it) → uv zip hash → uv's Python hashes → lock wheel
