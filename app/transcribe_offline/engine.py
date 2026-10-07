@@ -115,6 +115,10 @@ def load_model(
     return WhisperModel(str(path), device=device, compute_type=compute_type)
 
 
+def on_gpu(model: WhisperModel) -> bool:
+    return model.model.device == "cuda"
+
+
 def _frames(container: av.container.InputContainer) -> Iterator[AudioFrame]:
     """First audio stream's frames, skipping corrupt ones (as faster-whisper's own decoder does)."""
     import av.error
