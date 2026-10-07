@@ -1,4 +1,5 @@
 import math
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -58,6 +59,49 @@ def test_missing_files_and_load_refusal(tmp_path: Path) -> None:
     assert engine.missing_files(model_dir) == [REQUIRED_FILES[-1]]
     with pytest.raises(engine.ModelMissingError, match="preprocessor_config.json"):
         engine.load_model(tmp_path, engine.LANGUAGES["Estonian"])
+
+
+def test_register_nvidia_dll_dirs_adds_each_bin_and_prepends_path(tmp_path: Path) -> None:
+    for pkg in ("cublas", "cudnn"):
+        (tmp_path / "nvidia" / pkg / "bin").mkdir(parents=True)
+    (tmp_path / "nvidia" / "cuda_nvrtc" / "lib").mkdir(parents=True)  # no bin: skipped
+    added: list[str] = []
+    environ = {"PATH": "system-dirs"}
+    dirs = engine.register_nvidia_dll_dirs([str(tmp_path / "nvidia")], added.append, environ)
+    expected = [str(tmp_path / "nvidia" / pkg / "bin") for pkg in ("cublas", "cudnn")]
+    assert dirs == added == expected
+    assert environ["PATH"].split(os.pathsep) == [*expected, "system-dirs"]
+
+
+def test_register_nvidia_dll_dirs_without_gpu_group_leaves_path(tmp_path: Path) -> None:
+    environ = {"PATH": "system-dirs"}
+    assert engine.register_nvidia_dll_dirs([], print, environ) == []
+    assert engine.register_nvidia_dll_dirs([str(tmp_path)], print, environ) == []
+    assert environ == {"PATH": "system-dirs"}
+
+
+@pytest.mark.parametrize(
+    ("gpu", "libraries", "devices", "expected"),
+    [
+        (True, True, 1, ("cuda", "float16")),
+        (True, False, 1, ("cpu", "int8")),  # gpu group not installed
+        (True, True, 0, ("cpu", "int8")),  # libraries but no usable device
+        (False, True, 1, ("cpu", "int8")),  # the CPU fallback after a GPU failure
+    ],
+)
+def test_pick_device(gpu: bool, libraries: bool, devices: int, expected: tuple[str, str]) -> None:
+    calls: list[str] = []
+
+    def has_libraries() -> bool:
+        calls.append("libraries")
+        return libraries
+
+    def cuda_count() -> int:
+        calls.append("cuda_count")  # imports ctranslate2: only after the DLL dirs are registered
+        return devices
+
+    assert engine.pick_device(gpu, has_libraries, cuda_count) == expected
+    assert calls in ([], ["libraries"], ["libraries", "cuda_count"])
 
 
 @dataclass

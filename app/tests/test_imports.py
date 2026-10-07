@@ -10,18 +10,23 @@ RUNTIME = [
     "__init__.py",
     "__main__.py",
     "app.py",
+    "cli.py",
     "engine.py",
     "guard.py",
+    "job.py",
     "models.py",
 ]  # setup.py excluded
 ALLOWED = {
     "__future__",
+    "argparse",
     "av",
     "av.audio.frame",
     "av.container",
     "av.error",
     "collections.abc",
+    "ctranslate2",
     "dataclasses",
+    "functools",
     "itertools",
     "logging",
     "math",
@@ -38,7 +43,9 @@ ALLOWED = {
     "faster_whisper",
     "transcribe_offline",
     "transcribe_offline.app",
+    "transcribe_offline.cli",
     "transcribe_offline.guard",
+    "transcribe_offline.job",
     "transcribe_offline.models",
 }
 DYNAMIC = {"__import__", "importlib", "eval", "exec", "call"}  # .call/.eval also run Tcl
