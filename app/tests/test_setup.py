@@ -74,10 +74,21 @@ def test_detect_gpu_reads_first_gpu_from_system32_nvidia_smi() -> None:
     run = FakeRun(
         "NVIDIA GeForce RTX 3060, Laptop, 12288, 560.94, 8.6\nTesla T4, 15360, 560.94, 7.5\n"
     )
-    info = setup.detect_gpu({"SystemRoot": "D:\\Win"}, run=run)
+    info = setup.detect_gpu({"SystemRoot": "D:\\Win"}, run=run, platform="win32")
     assert info == setup.GpuInfo("NVIDIA GeForce RTX 3060, Laptop", 12288, (560, 94), (8, 6))
     assert run.cmd[0].startswith("D:\\Win") and run.cmd[0].endswith("nvidia-smi.exe")
     assert str(info) == "NVIDIA GeForce RTX 3060, Laptop (12 GB, driver 560.94)"
+
+
+@pytest.mark.parametrize(
+    ("env", "smi"),
+    [({"WSL_DISTRO_NAME": "Ubuntu"}, "/usr/lib/wsl/lib/nvidia-smi"), ({}, "/usr/bin/nvidia-smi")],
+)
+def test_detect_gpu_on_linux_runs_the_drivers_nvidia_smi(env: dict[str, str], smi: str) -> None:
+    run = FakeRun("NVIDIA GeForce RTX 3070 Laptop GPU, 8192, 610.88, 8.6\n")
+    info = setup.detect_gpu(env, run=run, platform="linux")
+    assert info is not None and info.driver == (610, 88)
+    assert run.cmd[0] == smi
 
 
 @pytest.mark.parametrize(
@@ -102,25 +113,32 @@ def test_detect_gpu_missing_tool_is_none() -> None:
 
 
 @pytest.mark.parametrize(
-    ("info", "capable"),
+    ("info", "platform", "capable"),
     [
-        (setup.GpuInfo("RTX 3050", 4096, (528, 33), (8, 6)), True),
+        (setup.GpuInfo("RTX 3050", 4096, (528, 33), (8, 6)), "win32", True),
+        (setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)), "win32", False),  # below CUDA 12
         (
             setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)),
-            False,
-        ),  # below the CUDA 12 driver floor
-        (setup.GpuInfo("GTX 1050", 3072, (560, 94), (6, 1)), False),  # too little VRAM
-        (setup.GpuInfo("GTX 1070", 8192, (560, 94), (6, 1)), False),  # Pascal: no float16
-        (None, False),
+            "linux",
+            True,
+        ),  # Linux floor 525.60.13
+        (setup.GpuInfo("RTX 3050", 4096, (525, 53), (8, 6)), "linux", False),
+        (setup.GpuInfo("RTX 3050", 4096, (528, 24), (8, 6)), "wsl", False),  # Windows' driver
+        (setup.GpuInfo("GTX 1050", 3072, (560, 94), (6, 1)), "win32", False),  # too little VRAM
+        (setup.GpuInfo("GTX 1070", 8192, (560, 94), (6, 1)), "win32", False),  # Pascal: no float16
+        (None, "win32", False),
     ],
 )
-def test_gpu_capable_needs_driver_and_vram(info: setup.GpuInfo | None, capable: bool) -> None:
-    assert setup.gpu_capable(info) is capable
+def test_gpu_capable_needs_driver_and_vram(
+    info: setup.GpuInfo | None, platform: str, capable: bool
+) -> None:
+    env = {"WSL_DISTRO_NAME": "Ubuntu"} if platform == "wsl" else {}
+    assert setup.gpu_capable(info, "linux" if platform == "wsl" else platform, env) is capable
 
 
 def test_sync_gpu_group_runs_bundled_uv_frozen(tmp_path: Path) -> None:
     run = FakeRun(returncode=1)
-    assert setup.sync_gpu_group(tmp_path, run=run) is False
+    assert setup.sync_gpu_group(tmp_path, run=run, platform="win32") is False
     assert run.cmd == [
         str(tmp_path / ".uv" / "uv.exe"),
         "sync",
@@ -132,6 +150,8 @@ def test_sync_gpu_group_runs_bundled_uv_frozen(tmp_path: Path) -> None:
         "{}.{}.{}".format(*sys.version_info[:3]),
     ]
     assert run.kwargs["cwd"] == tmp_path
+    setup.sync_gpu_group(tmp_path, run=run, platform="linux")
+    assert run.cmd[0] == "uv"  # the user's own uv, on PATH
 
 
 def fail_fetch(url: str) -> IO[bytes]:

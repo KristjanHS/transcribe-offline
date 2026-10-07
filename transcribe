@@ -1,6 +1,12 @@
 #!/bin/sh
 # Linux CLI: ./transcribe -l et|en [--no-timestamps] FILE...  (install steps: README)
 set -eu
-app="$(cd "$(dirname "$0")/app" && pwd)"
+app="$(dirname -- "$(readlink -f -- "$0")")/app"  # also when run through a symlink
+# The gpu group's CUDA libraries (setup installs it on a capable GPU), which ctranslate2 loads by name.
+for lib in "$app"/.venv/lib/python3*/site-packages/nvidia/*/lib; do
+    if [ -d "$lib" ]; then
+        export LD_LIBRARY_PATH="$lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    fi
+done
 # -P: never import from the working directory, only the app folder.
 PYTHONPATH="$app" exec "$app/.venv/bin/python" -P -m transcribe_offline "$@"

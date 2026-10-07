@@ -1,5 +1,6 @@
 import io
 import queue
+import signal
 import threading
 from pathlib import Path
 
@@ -72,3 +73,23 @@ def test_passes_language_and_timestamps_to_the_job(tmp_path: Path) -> None:
         lambda _p: None,
     )
     assert seen == [("en", False)]
+
+
+def test_ctrl_c_cancels_the_job_and_exits_130(tmp_path: Path) -> None:
+    def job(
+        files: list[Path],
+        language: str,
+        timestamps: bool,
+        events: queue.Queue[Event],
+        cancel: threading.Event,
+    ) -> None:
+        signal.raise_signal(signal.SIGINT)
+        events.put(Event("progress"))  # wakes the main thread, which then runs the handler
+        events.put(Event("finished" if cancel.wait(5) else "failed", text="not cancelled"))
+
+    before = signal.getsignal(signal.SIGINT)
+    code = cli.main(
+        ["-l", "et", str(tmp_path / "a.wav")], job, io.StringIO(), io.StringIO(), lambda _p: None
+    )
+    assert code == 130
+    assert signal.getsignal(signal.SIGINT) is before

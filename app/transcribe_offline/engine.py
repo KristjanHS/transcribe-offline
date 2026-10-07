@@ -8,7 +8,7 @@ import logging
 import math
 import os
 import sys
-from collections.abc import Callable, Iterable, Iterator, MutableMapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -74,12 +74,28 @@ def register_nvidia_dll_dirs(
     return dirs
 
 
+def nvidia_libs_on_loader_path(
+    roots: Iterable[str], environ: Mapping[str, str] = os.environ
+) -> bool:
+    """Linux: are the gpu group's nvidia/*/lib all on LD_LIBRARY_PATH (./transcribe puts them)?
+
+    The loader reads it only at process start; without it CUDA aborts the process, no fallback.
+    """
+    dirs = {d.resolve() for root in roots for d in Path(root).glob("*/lib") if d.is_dir()}
+    on_path = {Path(p).resolve() for p in environ.get("LD_LIBRARY_PATH", "").split(os.pathsep) if p}
+    if dirs and not dirs <= on_path:
+        log.info("GPU libraries are not on LD_LIBRARY_PATH; start with ./transcribe for the GPU")
+    return bool(dirs) and dirs <= on_path
+
+
 @functools.cache
 def gpu_libraries() -> bool:
     """Once per process, before ctranslate2 is imported: is the gpu group installed?"""
     roots = [
         str(Path(p, "nvidia")) for p in sys.path if Path(p, "nvidia").is_dir()
     ]  # nvidia-* wheels
+    if sys.platform != "win32":
+        return nvidia_libs_on_loader_path(roots)
     return bool(register_nvidia_dll_dirs(roots))
 
 

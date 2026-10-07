@@ -35,10 +35,10 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 |--------|---------|-------------|
 | Crafted audio file attacks FFmpeg | `engine.decode_audio`: `file` protocol only, 8 demuxers, audio-codec allow-list (FFmpeg's decoder whitelist, applied before any decoder runs) | unit tests |
 | A memory-corruption bug in FFmpeg or CTranslate2 (or cuBLAS/cuDNN on a GPU) | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
-| CUDA or cuDNN aborts the process (a native crash Python cannot catch) | none; Python-visible GPU errors fall back to the CPU (`job.run_job`); the user can delete `app\.venv\Lib\site-packages\nvidia` | fallback: unit tests; abort: not verified |
+| CUDA or cuDNN aborts the process (a native crash Python cannot catch) | none; Python-visible GPU errors fall back to the CPU (`job.run_job`); the user can delete `app\.venv\Lib\site-packages\nvidia` (Linux: runs `uv sync --frozen --no-dev`) | fallback: unit tests; abort: not verified |
 | Our code opens a socket, starts a process or writes outside its folder | import ban (`TID251`, `test_imports.py`); runtime audit hook `guard.py` | static checks, unit tests, release smoke test |
 | Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; our code never passes Tcl text (no `.call`/`.eval`). The audit hook cannot see native code | Tcl: `test_imports.py`; FFmpeg, CTranslate2: not verified |
-| Install or app writes outside the folder | `Transcribe-Setup.exe` / `install.bat` point uv's cache, Python and temp files at `app\`; `guard.py` at runtime | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
+| Install or app writes outside the folder | `Transcribe-Setup.exe` / `install.bat` point uv's cache, Python and temp files at `app\`; `guard.py` at runtime. Linux CLI: the user's own uv keeps its cache and Python in the home folder | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
 | Tampered download at install time | SHA-256 pins (table below) | `test_setup.py`; release CI runs `Transcribe-Setup.exe`, then `install.bat` |
 | Tampered release zip | provenance attestation | the user (README install step 1) |
 | Transcript leaves the machine (OneDrive, share, WER) | none in the app; user's folder choice, admin WER policy | not verified |
@@ -49,7 +49,7 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 Ruff rule `TID251` (config in `app/pyproject.toml`) forbids our code from importing `socket`, `urllib`,
 `http`, `subprocess`, `huggingface_hub`, `ctypes` or calling `os.system`/`popen`/`startfile`/`spawn*`/
 `exec*`, everywhere except `app/transcribe_offline/setup.py` (install time). `app/tests/test_imports.py` parses
-the runtime modules (`__init__`, `__main__`, `app`, `engine`, `guard`, `models`; not `setup.py`) and fails if any
+the runtime modules (`__init__`, `__main__`, `app`, `cli`, `engine`, `guard`, `job`, `models`; not `setup.py`) and fails if any
 static import is outside an explicit allow-list, if anything but `WhisperModel` is imported from
 `faster_whisper`, or if `__import__`, `importlib`, `eval`, `exec` or `call` (Tcl) appear by name. Both are static
 checks of our source only: they don't cover indirect access (e.g. `getattr`) or what imported libraries
@@ -74,7 +74,7 @@ into the process. The runtime guarantee therefore rests on:
 
 | Host | What | Pin |
 |------|------|-----|
-| github.com → release-assets.githubusercontent.com | uv 0.12.19 zip | SHA-256 in `pins.txt` |
+| github.com → release-assets.githubusercontent.com | uv 0.12.19 zip | SHA-256 in `pins.txt` (Linux: the user installs uv) |
 | github.com (python-build-standalone, via uv) | Python 3.12.14 | uv's embedded hash table |
 | pypi.org / files.pythonhosted.org | wheels | `app/uv.lock` hashes (`uv sync --frozen`) |
 | huggingface.co → us.aws.cdn.hf.co (`model.bin`) | models | commit + SHA-256 per file in `app/transcribe_offline/models.py` |
@@ -82,8 +82,8 @@ into the process. The runtime guarantee therefore rests on:
 Redirect hosts as observed with `curl -sI`; the hashes, not the hosts, are the integrity anchor.
 python-build-standalone's CDN host is whatever github.com redirects to (unverified until the first
 Windows run). `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
-variables that could redirect a download. Setup also runs `%SystemRoot%\System32\nvidia-smi.exe` (a
-read-only GPU query) and, when it reports driver 528.33+, 4 GB+ and compute capability 7.0+, `uv sync --frozen --no-dev --group
+variables that could redirect a download. Setup also runs `%SystemRoot%\System32\nvidia-smi.exe` (Linux: `/usr/bin/nvidia-smi`, on WSL
+`/usr/lib/wsl/lib/nvidia-smi`; a read-only GPU query) and, when it reports driver 528.33+ (Linux 525.60.13+), 4 GB+ and compute capability 7.0+, `uv sync --frozen --no-dev --group
 gpu`: about 1.3 GB of NVIDIA wheels from PyPI, pinned by `app/uv.lock` like the rest.
 
 Trust chain: release zip (provenance attestation; the exe inside also carries the attestation of the

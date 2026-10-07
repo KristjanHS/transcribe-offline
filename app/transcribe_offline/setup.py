@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 CHUNK = 1 << 20
 LOG_EVERY = 100 << 20
 
-MIN_GPU_DRIVER = (528, 33)  # CUDA 12.0 on Windows
+MIN_GPU_DRIVER = {"win32": (528, 33), "linux": (525, 60, 13)}  # CUDA 12.0
 MIN_GPU_VRAM_MIB = 4000
 MIN_GPU_COMPUTE = (7, 0)  # ctranslate2 runs float16 on CUDA only from Volta on
 
@@ -51,10 +51,16 @@ class GpuInfo:
         return f"{self.name} ({self.vram_mib / 1024:.0f} GB, driver {driver})"
 
 
-def detect_gpu(env: Mapping[str, str] = os.environ, run: Run = subprocess.run) -> GpuInfo | None:
+def detect_gpu(
+    env: Mapping[str, str] = os.environ, run: Run = subprocess.run, platform: str = sys.platform
+) -> GpuInfo | None:
     """First GPU from nvidia-smi (ships with every NVIDIA driver); None on any doubt."""
+    if platform == "win32":
+        smi = str(Path(env.get("SystemRoot", "C:\\Windows"), "System32", "nvidia-smi.exe"))
+    else:  # on WSL the Windows driver provides it
+        smi = "/usr/lib/wsl/lib/nvidia-smi" if "WSL_DISTRO_NAME" in env else "/usr/bin/nvidia-smi"
     cmd = [
-        str(Path(env.get("SystemRoot", "C:\\Windows"), "System32", "nvidia-smi.exe")),
+        smi,
         "--query-gpu=name,memory.total,driver_version,compute_cap",
         "--format=csv,noheader,nounits",
     ]
@@ -72,22 +78,27 @@ def version(text: str) -> tuple[int, ...]:
     return tuple(int(n) for n in text.split("."))
 
 
-def gpu_capable(info: GpuInfo | None) -> bool:
+def gpu_capable(
+    info: GpuInfo | None, platform: str = sys.platform, env: Mapping[str, str] = os.environ
+) -> bool:
+    floor = MIN_GPU_DRIVER["win32" if "WSL_DISTRO_NAME" in env else platform]  # WSL: Windows driver
     return (
         info is not None
         and info.vram_mib >= MIN_GPU_VRAM_MIB
-        and info.driver >= MIN_GPU_DRIVER
+        and info.driver >= floor
         and info.compute >= MIN_GPU_COMPUTE
     )
 
 
-def sync_gpu_group(root: Path = APP_ROOT, run: Run = subprocess.run) -> bool:
+def sync_gpu_group(
+    root: Path = APP_ROOT, run: Run = subprocess.run, platform: str = sys.platform
+) -> bool:
     # The installer's environment (UV_* settings, cleared variables) is inherited unchanged.
     python = "{}.{}.{}".format(
         *sys.version_info[:3]
     )  # as the installer's sync, so UV_PYTHON can't recreate .venv
     cmd = [
-        str(root / ".uv" / "uv.exe"),
+        str(root / ".uv" / "uv.exe") if platform == "win32" else "uv",  # Linux: the user's own uv
         "sync",
         "--frozen",
         "--no-dev",

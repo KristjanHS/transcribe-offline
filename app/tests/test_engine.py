@@ -244,3 +244,17 @@ def test_decode_audio_rejects_content_that_probes_as_another_format(tmp_path: Pa
     path.write_text(f"ffconcat version 1.0\nfile '{FIXTURES / 'en.wav'}'\n")
     with pytest.raises(engine.UnsupportedAudioError, match="format"):
         engine.decode_audio(path)
+
+
+def test_linux_uses_the_gpu_only_when_every_nvidia_lib_is_on_the_loader_path(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "nvidia"
+    cublas, cudnn = root / "cublas" / "lib", root / "cudnn" / "lib"
+    cublas.mkdir(parents=True)
+    cudnn.mkdir(parents=True)
+    check = engine.nvidia_libs_on_loader_path
+    assert check([str(root)], {"LD_LIBRARY_PATH": f"{cudnn}{os.pathsep}{cublas}"})
+    assert not check([str(root)], {"LD_LIBRARY_PATH": str(cublas)})  # CUDA would abort
+    assert not check([str(root)], {})
+    assert not check([], {"LD_LIBRARY_PATH": str(cublas)})  # no gpu group
