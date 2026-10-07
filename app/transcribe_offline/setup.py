@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 CHUNK = 1 << 20
 LOG_EVERY = 100 << 20
 
-MIN_GPU_DRIVER = {"win32": (528, 33), "linux": (525, 60, 13)}  # CUDA 12.0
+MIN_GPU_DRIVER = (528, 33)  # CUDA 12.0 on Windows; also used on Linux, so one floor everywhere
 MIN_GPU_VRAM_MIB = 4000
 MIN_GPU_COMPUTE = (7, 0)  # ctranslate2 runs float16 on CUDA only from Volta on
 
@@ -78,14 +78,11 @@ def version(text: str) -> tuple[int, ...]:
     return tuple(int(n) for n in text.split("."))
 
 
-def gpu_capable(
-    info: GpuInfo | None, platform: str = sys.platform, env: Mapping[str, str] = os.environ
-) -> bool:
-    floor = MIN_GPU_DRIVER["win32" if "WSL_DISTRO_NAME" in env else platform]  # WSL: Windows driver
+def gpu_capable(info: GpuInfo | None) -> bool:
     return (
         info is not None
         and info.vram_mib >= MIN_GPU_VRAM_MIB
-        and info.driver >= floor
+        and info.driver >= MIN_GPU_DRIVER
         and info.compute >= MIN_GPU_COMPUTE
     )
 
