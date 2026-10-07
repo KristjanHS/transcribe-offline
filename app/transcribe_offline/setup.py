@@ -1,6 +1,7 @@
-"""Install-time model download (`python -m transcribe_offline.setup`). The only module with network.
+"""Install time (`python -m transcribe_offline.setup`); the only module with network or processes.
 
-Fetches every pinned file into models/<lang>/, verifies its SHA-256, skips files already verified.
+On a capable NVIDIA GPU, adds the locked `gpu` dependency group (uv sync). Then fetches every pinned
+model file into models/<lang>/, verifies its SHA-256, skips files already verified.
 """
 
 from __future__ import annotations
@@ -8,13 +9,17 @@ from __future__ import annotations
 import hashlib
 import http.client
 import logging
+import os
 import ssl
+import subprocess  # nosec B404  # nvidia-smi and uv only, list args
 import sys
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from typing import IO
+from typing import IO, Any
 
+from transcribe_offline import APP_ROOT
 from transcribe_offline.models import MODELS, MODELS_ROOT, ModelPin
 
 log = logging.getLogger(__name__)
@@ -22,11 +27,52 @@ log = logging.getLogger(__name__)
 CHUNK = 1 << 20
 LOG_EVERY = 100 << 20
 
+MIN_GPU_DRIVER = (528, 33)  # CUDA 12.0 on Windows
+MIN_GPU_VRAM_MIB = 4000
+
 Fetch = Callable[[str], IO[bytes]]
+Run = Callable[..., Any]
 
 
 class ChecksumError(Exception):
     pass
+
+
+@dataclass(frozen=True)
+class GpuInfo:
+    name: str
+    vram_mib: int
+    driver: tuple[int, ...]
+
+    def __str__(self) -> str:
+        driver = ".".join(map(str, self.driver))
+        return f"{self.name} ({self.vram_mib / 1024:.0f} GB, driver {driver})"
+
+
+def detect_gpu(env: Mapping[str, str] = os.environ, run: Run = subprocess.run) -> GpuInfo | None:
+    """First GPU from nvidia-smi (ships with every NVIDIA driver); None on any doubt."""
+    cmd = [
+        str(Path(env.get("SystemRoot", "C:\\Windows"), "System32", "nvidia-smi.exe")),
+        "--query-gpu=name,memory.total,driver_version",
+        "--format=csv,noheader,nounits",
+    ]
+    try:
+        result = run(cmd, capture_output=True, text=True, timeout=15, check=False)
+        name, vram, driver = (part.strip() for part in result.stdout.splitlines()[0].rsplit(",", 2))
+        info = GpuInfo(name, int(float(vram)), tuple(int(n) for n in driver.split(".")))
+    except (OSError, subprocess.SubprocessError, IndexError, ValueError):
+        return None
+    return info if result.returncode == 0 else None
+
+
+def gpu_capable(info: GpuInfo | None) -> bool:
+    return info is not None and info.vram_mib >= MIN_GPU_VRAM_MIB and info.driver >= MIN_GPU_DRIVER
+
+
+def sync_gpu_group(root: Path = APP_ROOT, run: Run = subprocess.run) -> bool:
+    # The installer's environment (UV_* settings, cleared variables) is inherited unchanged.
+    cmd = [str(root / ".uv" / "uv.exe"), "sync", "--frozen", "--no-dev", "--group", "gpu"]
+    return run(cmd, cwd=root, check=False).returncode == 0
 
 
 def open_url(url: str) -> IO[bytes]:
@@ -78,8 +124,21 @@ def ensure_model(pin: ModelPin, folder: Path, fetch: Fetch = open_url) -> None:
         download(pin.url(name), dest, expected, fetch)
 
 
-def main(root: Path = MODELS_ROOT, fetch: Fetch = open_url) -> int:
+def main(
+    root: Path = MODELS_ROOT,
+    fetch: Fetch = open_url,
+    detect: Callable[[], GpuInfo | None] = detect_gpu,
+    sync: Callable[[], bool] = sync_gpu_group,
+) -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
+    info = detect()
+    if not gpu_capable(info):
+        log.info("%s: CPU only", info or "No NVIDIA GPU found")
+    else:
+        log.info("%s: installing GPU libraries (~1.3 GB)", info)
+        if not sync():
+            log.error("Installing the GPU libraries failed; run setup again.")
+            return 1
     try:
         for model_dir, pin in MODELS.items():
             ensure_model(pin, root / model_dir, fetch)

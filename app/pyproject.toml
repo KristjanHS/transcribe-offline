@@ -35,7 +35,7 @@ target-version = "py312"
 select = ["E", "F", "W", "I", "B", "UP", "S", "T20", "TID"]
 
 [tool.ruff.lint.per-file-ignores]
-"transcribe_offline/setup.py" = ["TID251"]
+"transcribe_offline/setup.py" = ["TID251"]  # install time: model downloads, nvidia-smi, uv sync --group gpu
 "tests/**" = ["S101"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
