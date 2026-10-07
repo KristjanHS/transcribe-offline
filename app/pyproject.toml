@@ -8,6 +8,11 @@ dependencies = ["faster-whisper==1.2.1"]
 
 [dependency-groups]
 dev = ["bandit", "pip-audit", "pyright", "pytest", "pytest-socket", "ruff", "zizmor"]
+# CUDA libraries for ctranslate2; setup.py installs this group only on a capable NVIDIA GPU.
+gpu = [
+    "nvidia-cublas-cu12==12.9.2.10; sys_platform == 'win32'",
+    "nvidia-cudnn-cu12==9.1.0.70; sys_platform == 'win32'",  # ctranslate2 4.6.2 imports cudnn64_9.dll
+]
 
 [tool.uv]
 # Never build the project: a build backend is not hash-pinned by uv.lock.
@@ -18,6 +23,8 @@ exclude-dependencies = [
 ]
 # Native wheels Windows App Control (Smart App Control / ISG) already trusts by reputation;
 # av 18.1.0 was blocked. Bump only to versions proven on an enforcing PC.
+# On a ctranslate2 bump, re-check whether its DLL still imports cudnn64_9.dll; if not, drop
+# nvidia-cudnn-cu12 from the gpu group (-680 MB).
 constraint-dependencies = ["av==16.0.1", "ctranslate2==4.6.2", "numpy==2.3.5", "tokenizers==0.22.1"]
 
 [tool.ruff]

@@ -40,8 +40,11 @@ jobs:
         run: |
           & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /optimize+ /warnaserror+ /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /win32manifest:..\installer\Setup.manifest /out:"$env:RUNNER_TEMP\Transcribe-Setup.exe" ..\installer\Setup.cs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: pip-audit on the locked runtime deps
-        if: runner.os == 'Linux'
+      - name: pip-audit on the locked runtime deps, gpu group included (its wheels are win32-only)
+        if: runner.os == 'Windows'
         run: |
-          uv export --frozen --no-dev --format requirements-txt > requirements.txt
+          uv export --frozen --no-dev --group gpu --format requirements-txt -o requirements.txt
           uv run pip-audit --disable-pip --require-hashes -r requirements.txt
+      - name: The gpu group installs from the lock, as setup.py runs it (last step; drops the dev group)
+        if: runner.os == 'Windows'
+        run: uv sync --frozen --no-dev --group gpu
