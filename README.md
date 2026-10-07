@@ -18,7 +18,10 @@ _(Developers: jump to [Development](#development).)_
    `gh attestation verify transcribe-offline-vX.Y.Z.zip -R KristjanHS/transcribe-offline`
    (without `gh`: compare PowerShell `Get-FileHash transcribe-offline-vX.Y.Z.zip` with `SHA256SUMS`).
 2. Double-click `Transcribe-Setup.exe`. It downloads about 3.5 GB (uv, Python, libraries, two speech
-   models), verifying every file against a pinned hash. If it stops, run it again to continue; it
+   models), plus 1.3 GB of CUDA libraries on a PC with an NVIDIA GPU (GTX 16 / RTX series or newer, 4 GB+ memory, driver 528.33+),
+   which then transcribes on the GPU, falling back to the CPU if the GPU fails. To stop using the GPU,
+   delete `app\.venv\Lib\site-packages\nvidia` (setup puts it back when run again).
+   Setup verifies every file against a pinned hash. If it stops, run it again to continue; it
    re-hashes uv and the models and downloads only what is missing or does not match.
    Windows may warn that it is unsigned (More info → Run anyway); that is expected.
    If Windows blocks it outright (Smart App Control or your organisation's App Control): delete the
@@ -41,6 +44,27 @@ Known limit: proxies that require NTLM authentication may block the download.
 **Upgrade:** the app never updates itself; security fixes come as a new release. Extract the
 new zip to a new folder, optionally copy the old `app\models\` folder into the new `app\`, run
 `Transcribe-Setup.exe`. **Uninstall:** delete the folder.
+
+## Install (Linux CLI)
+
+No zip, no admin rights: you need `git` and [uv](https://docs.astral.sh/uv/) (x86-64 Linux).
+
+```sh
+git clone https://github.com/KristjanHS/transcribe-offline.git
+cd transcribe-offline/app
+uv sync --frozen --no-dev                     # locked, hash-checked libraries
+.venv/bin/python -m transcribe_offline.setup  # pinned, SHA-256-verified models, about 3 GB
+cd .. && ./transcribe -l et talk.mp3          # -l en for English; several files at once are fine
+```
+
+Each transcript is saved beside its audio as `.txt` and its path is printed; progress goes to stderr.
+`--no-timestamps` gives plain text. Exit code 0 when every file was transcribed, 1 if any failed, 130 on
+Ctrl+C (the unfinished transcript is removed). The same guard as on Windows blocks network, child
+processes and writes outside the folder at runtime; `./transcribe` runs the app's own Python, never uv.
+
+Unlike the Windows setup, uv keeps its download cache and the Python it installs in your home folder
+(`~/.cache/uv`, `~/.local/share/uv`). **Upgrade:** `git pull`, then the `uv sync` and setup lines again
+(setup keeps verified models). **Uninstall:** delete the folder (`uv cache clean` empties uv's cache).
 
 ## License
 

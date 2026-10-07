@@ -7,65 +7,17 @@ import queue
 import threading
 import time
 import tkinter as tk
-from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from transcribe_offline import APP_ROOT, engine, guard
-from transcribe_offline.models import MODELS_ROOT
+from transcribe_offline.job import Event, run_job
 
 log = logging.getLogger(__name__)
 
 LOG_FILE = APP_ROOT / "logs" / "app.log"
 POLL_MS = 100
 ETA_MIN_SECONDS = 5.0  # below this the rate is too noisy to show
-
-
-@dataclass(frozen=True)
-class Event:
-    kind: str  # started | progress | done | failed | finished
-    index: int = -1
-    text: str = ""
-    fraction: float = 0.0
-
-
-def run_job(
-    files: list[Path],
-    language: str,
-    timestamps: bool,
-    events: queue.Queue[Event],
-    cancel: threading.Event,
-    models_root: Path = MODELS_ROOT,
-) -> None:
-    """Worker-thread body: load the model once, transcribe files in order, report via events."""
-    try:
-        model = engine.load_model(models_root, language)
-    except Exception as exc:
-        log.exception("Model load failed")
-        events.put(Event("failed", text=str(exc)))
-        events.put(Event("finished"))
-        return
-    for i, audio in enumerate(files):
-        if cancel.is_set():
-            break
-        events.put(Event("started", i, audio.name))
-        try:
-            txt = engine.transcribe_file(
-                model,
-                audio,
-                language,
-                timestamps=timestamps,
-                on_progress=lambda f: events.put(Event("progress", fraction=f)),
-                cancelled=cancel.is_set,
-            )
-        except engine.Cancelled:
-            break
-        except Exception as exc:
-            log.exception("Transcription failed: %s", audio.name)  # name only: paths are personal
-            events.put(Event("failed", i, f"{audio.name}: {exc}"))
-        else:
-            events.put(Event("done", i, str(txt)))
-    events.put(Event("finished"))
 
 
 def seconds_left(fraction: float, elapsed: float) -> float | None:

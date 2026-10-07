@@ -148,7 +148,7 @@ jobs:
           name="transcribe-offline-${GITHUB_REF_NAME}"
           git archive --format=zip --prefix="$name/" -o "$name.zip" "$GITHUB_REF_NAME"
           mkdir "$name" && cp Transcribe-Setup.exe "$name/" && zip -q "$name.zip" "$name/Transcribe-Setup.exe"
-          uv export --project app --frozen --no-dev --format cyclonedx1.5 > sbom.cdx.json
+          uv export --project app --frozen --no-dev --group gpu --format cyclonedx1.5 > sbom.cdx.json
           sha256sum "$name.zip" Transcribe-Setup.exe sbom.cdx.json > SHA256SUMS
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
