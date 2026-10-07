@@ -1,7 +1,8 @@
 # Security
 
-transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU. The whole app is
-654 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
+transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU, or NVIDIA GPU
+when setup finds one. The whole app is
+798 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
 (`installer/Setup.cs`, 181 lines, built into `Transcribe-Setup.exe`) and its fallback `install.bat`,
 written to be read in full.
 
@@ -22,7 +23,7 @@ written to be read in full.
 Our code never opens a network connection or starts a child process at runtime, and writes nothing
 outside its folder except the transcripts. No telemetry, no auto-update, no admin rights, no registry
 writes by the app itself (the Windows file dialog records recent folders, as for any app), no services
-or scheduled tasks. Native libraries (FFmpeg, CTranslate2, tokenizers), Tcl and Windows itself are
+or scheduled tasks. Native libraries (FFmpeg, CTranslate2, tokenizers; cuBLAS/cuDNN on a GPU), Tcl and Windows itself are
 outside what our code controls; see the threat model below.
 
 Windows Error Reporting may send a crash report, which can hold audio or transcript data, to
@@ -33,7 +34,8 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 | Threat | Control | Verified by |
 |--------|---------|-------------|
 | Crafted audio file attacks FFmpeg | `engine.decode_audio`: `file` protocol only, 8 demuxers, audio-codec allow-list (FFmpeg's decoder whitelist, applied before any decoder runs) | unit tests |
-| A memory-corruption bug in FFmpeg or CTranslate2 | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
+| A memory-corruption bug in FFmpeg or CTranslate2 (or cuBLAS/cuDNN on a GPU) | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
+| CUDA or cuDNN aborts the process (a native crash Python cannot catch) | none; Python-visible GPU errors fall back to the CPU (`app.run_job`); the user can delete `app\.venv\Lib\site-packages\nvidia` | fallback: unit tests; abort: not verified |
 | Our code opens a socket, starts a process or writes outside its folder | import ban (`TID251`, `test_imports.py`); runtime audit hook `guard.py` | static checks, unit tests, release smoke test |
 | Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; our code never passes Tcl text (no `.call`/`.eval`). The audit hook cannot see native code | Tcl: `test_imports.py`; FFmpeg, CTranslate2: not verified |
 | Install or app writes outside the folder | `Transcribe-Setup.exe` / `install.bat` point uv's cache, Python and temp files at `app\`; `guard.py` at runtime | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
@@ -80,7 +82,9 @@ into the process. The runtime guarantee therefore rests on:
 Redirect hosts as observed with `curl -sI`; the hashes, not the hosts, are the integrity anchor.
 python-build-standalone's CDN host is whatever github.com redirects to (unverified until the first
 Windows run). `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
-variables that could redirect a download.
+variables that could redirect a download. Setup also runs `%SystemRoot%\System32\nvidia-smi.exe` (a
+read-only GPU query) and, when it reports driver 528.33+ and 4 GB+, `uv sync --frozen --no-dev --group
+gpu`: about 1.3 GB of NVIDIA wheels from PyPI, pinned by `app/uv.lock` like the rest.
 
 Trust chain: release zip (provenance attestation; the exe inside also carries the attestation of the
 run that compiled it) → uv zip hash → uv's Python hashes → lock wheel
@@ -97,7 +101,8 @@ running them, and AppLocker/WDAC default rules may block programs in a user fold
 only when `installer/` changes, so its hash (and Windows reputation) stays the same across releases;
 `gh attestation verify Transcribe-Setup.exe -R KristjanHS/transcribe-offline` names the run that compiled
 it. `av`, `ctranslate2`, `numpy` and `tokenizers` are held at versions Windows App Control already
-trusts (`constraint-dependencies` in `app/pyproject.toml`). For an allow-list: `uv.exe`'s SHA-256 is
+trusts (`constraint-dependencies` in `app/pyproject.toml`). The NVIDIA wheels' DLLs are NVIDIA-signed;
+whether App Control allows them is not yet verified. For an allow-list: `uv.exe`'s SHA-256 is
 `UV_EXE_SHA256` in `pins.txt`; hash the Python executables under `app\.uv\python\` and
 `app\.venv\Scripts\` after install. Windows itself logs .NET and PowerShell runs under
 `%LOCALAPPDATA%\Microsoft\` (`CLR_v4.0\UsageLogs`, `Windows\PowerShell`); the release CI allows only those.
@@ -109,8 +114,8 @@ you install a new release. Security updates are a new release. A high-severity i
 dependency gets a new release within 14 days.
 
 `pip-audit` sees PyPI advisories only. Before each release the maintainer checks the upstream
-advisories of the native parts: uv and CPython (pins in `pins.txt`), FFmpeg 8.0 (bundled in `av` 16.0.1), CTranslate2 and
-tokenizers (versions in `app/uv.lock`).
+advisories of the native parts: uv and CPython (pins in `pins.txt`), FFmpeg 8.0 (bundled in `av` 16.0.1), CTranslate2,
+tokenizers, cuBLAS and cuDNN (versions in `app/uv.lock`).
 
 ## Verify it yourself (~15 min)
 

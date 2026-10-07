@@ -18,7 +18,10 @@ _(Developers: jump to [Development](#development).)_
    `gh attestation verify transcribe-offline-vX.Y.Z.zip -R KristjanHS/transcribe-offline`
    (without `gh`: compare PowerShell `Get-FileHash transcribe-offline-vX.Y.Z.zip` with `SHA256SUMS`).
 2. Double-click `Transcribe-Setup.exe`. It downloads about 3.5 GB (uv, Python, libraries, two speech
-   models), verifying every file against a pinned hash. If it stops, run it again to continue; it
+   models), plus 1.3 GB of CUDA libraries on a PC with an NVIDIA GPU (driver 528.33+, 4 GB+ memory),
+   which then transcribes on the GPU, falling back to the CPU if the GPU fails. To stop using the GPU,
+   delete `app\.venv\Lib\site-packages\nvidia` (setup puts it back when run again).
+   Setup verifies every file against a pinned hash. If it stops, run it again to continue; it
    re-hashes uv and the models and downloads only what is missing or does not match.
    Windows may warn that it is unsigned (More info → Run anyway); that is expected.
    If Windows blocks it outright (Smart App Control or your organisation's App Control): delete the
