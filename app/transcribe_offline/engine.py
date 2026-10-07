@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import functools
 import itertools
+import logging
 import math
-from collections.abc import Callable, Iterator
+import os
+import sys
+from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -32,6 +36,8 @@ SAMPLE_RATE = 16000
 
 LANGUAGES = {"Estonian": "et", "English": "en"}  # name -> language code = folder under models/
 
+log = logging.getLogger(__name__)
+
 
 class Cancelled(Exception):
     """The user pressed Cancel; the partial output has been removed."""
@@ -53,15 +59,60 @@ def missing_files(model_path: Path) -> list[str]:
     return [name for name in REQUIRED_FILES if not (model_path / name).is_file()]
 
 
-def load_model(models_root: Path, language: str) -> WhisperModel:
+def register_nvidia_dll_dirs(
+    roots: Iterable[str],
+    add_dll_directory: Callable[[str], object] | None = None,
+    environ: MutableMapping[str, str] = os.environ,
+) -> list[str]:
+    """Make the gpu group's DLLs (nvidia/*/bin) loadable; [] when the group is not installed."""
+    dirs = sorted(str(d) for root in roots for d in Path(root).glob("*/bin") if d.is_dir())
+    for directory in dirs:
+        (add_dll_directory or getattr(os, "add_dll_directory"))(directory)  # noqa: B009  # Windows only
+    if dirs:  # ctranslate2 loads cublas64_12.dll by bare name, which searches PATH
+        environ["PATH"] = os.pathsep.join([*dirs, environ.get("PATH", "")])
+    return dirs
+
+
+@functools.cache
+def gpu_libraries() -> bool:
+    """Once per process, before ctranslate2 is imported: is the gpu group installed?"""
+    roots = [
+        str(Path(p, "nvidia")) for p in sys.path if Path(p, "nvidia").is_dir()
+    ]  # nvidia-* wheels
+    return bool(register_nvidia_dll_dirs(roots))
+
+
+def cuda_device_count() -> int:
+    import ctranslate2  # deferred like faster_whisper
+
+    return ctranslate2.get_cuda_device_count()
+
+
+def pick_device(
+    gpu: bool, has_libraries: Callable[[], bool], cuda_count: Callable[[], int]
+) -> tuple[str, str]:
+    if gpu and has_libraries() and cuda_count() > 0:
+        return "cuda", "float16"
+    return "cpu", "int8"
+
+
+def load_model(
+    models_root: Path,
+    language: str,
+    gpu: bool = True,
+    has_libraries: Callable[[], bool] = gpu_libraries,
+    cuda_count: Callable[[], int] = cuda_device_count,
+) -> WhisperModel:
     path = models_root / language
     missing = missing_files(path)
     if missing:
         names = ", ".join(missing)
         raise ModelMissingError(f"Missing in {path}: {names}. Run Transcribe-Setup.exe.")
+    device, compute_type = pick_device(gpu, has_libraries, cuda_count)
+    log.info("Loading the %s model on %s (%s)", language, device, compute_type)
     from faster_whisper import WhisperModel  # deferred: heavy import, only needed once a job starts
 
-    return WhisperModel(str(path), device="cpu", compute_type="int8")
+    return WhisperModel(str(path), device=device, compute_type=compute_type)
 
 
 def _frames(container: av.container.InputContainer) -> Iterator[AudioFrame]:
