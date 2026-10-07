@@ -1,6 +1,6 @@
 [project]
 name = "transcribe-offline"
-version = "0.2.6"
+version = "0.2.7"
 description = "Minimal offline speech-to-text GUI and Linux CLI (Estonian + English, CPU or NVIDIA GPU, faster-whisper)."
 license = "MIT"
 requires-python = "==3.12.*"
