@@ -2,17 +2,17 @@
 # Per release: PackageVersion, ReleaseDate, the version folder in RelativeFilePath, InstallerUrl and
 # InstallerSha256 (the zip's line in the release's SHA256SUMS), then submit the three files to microsoft/winget-pkgs.
 PackageIdentifier: KristjanHS.TranscribeOffline
-PackageVersion: 0.2.6
+PackageVersion: 0.2.7
 InstallerType: zip
 NestedInstallerType: portable
 NestedInstallerFiles:
-- RelativeFilePath: transcribe-offline-v0.2.6\Transcribe-Setup.exe
+- RelativeFilePath: transcribe-offline-v0.2.7\Transcribe-Setup.exe
   PortableCommandAlias: transcribe-offline-setup
 MinimumOSVersion: 10.0.17134.0
-ReleaseDate: 2026-10-01
+ReleaseDate: 2026-10-07
 Installers:
 - Architecture: x64
-  InstallerUrl: https://github.com/KristjanHS/transcribe-offline/releases/download/v0.2.6/transcribe-offline-v0.2.6.zip
-  InstallerSha256: F9B47DB681FE703443831232FFCA864FDAEFF7ECA59FA82D939077423D1F6FE7
+  InstallerUrl: https://github.com/KristjanHS/transcribe-offline/releases/download/v0.2.7/transcribe-offline-v0.2.7.zip
+  InstallerSha256: 23C1100850A37202123EFEBFCB4AC2D1F58B92A675C437118C90C97C5F4B6D11
 ManifestType: installer
 ManifestVersion: 1.28.0
