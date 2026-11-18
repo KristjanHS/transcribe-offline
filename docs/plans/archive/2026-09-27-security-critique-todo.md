@@ -70,8 +70,8 @@ repo-settings steps.
   SECURITY.md.
 - Stage 5: full verification and code review.
 
-**Progress:** all stages done: 1 `45a8d5a`, 2 `87027d8`, 3 `1137856`, 4 `2eaa255`, 5 review fixes
-`1deb918` + `12471ae` (I1 ruling: Tcl hiding removed, `.call`/`.eval` banned instead). Windows paths
+**Progress:** all stages done: 1 `cb24f54`, 2 `ad0aa67`, 3 `3d08dd8`, 4 `2ccf79c`, 5 review fixes
+`3ab37e4` + `7b14729` (I1 ruling: Tcl hiding removed, `.call`/`.eval` banned instead). Windows paths
 stay unverified until the first release.yml run.
 
 ---

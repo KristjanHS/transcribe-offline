@@ -96,7 +96,7 @@ gpu = [
 
 1. **GPU PC, fresh install:** the setup log shows the GPU line and roughly 1.3 GB more downloaded. `app/.venv/Lib/site-packages/nvidia/{cublas,cudnn}/bin` exist.
 2. **Transcribe `tests/fixtures/et.wav` on the GPU PC:** the app log shows `cuda`/`float16`. The `.txt` matches the CPU output, either word-for-word or with differences only in timestamps or punctuation (record which). It is visibly faster than CPU; note the factor.
-3. **Smart App Control / App Control enforcing PC:** the NVIDIA DLLs load. They are NVIDIA-signed, but av 18.1.0 was blocked on that PC (`822fa29`), so this must be checked, not assumed.
+3. **Smart App Control / App Control enforcing PC:** the NVIDIA DLLs load. They are NVIDIA-signed, but av 18.1.0 was blocked on that PC (`3b79cc3`), so this must be checked, not assumed.
 4. **Forced failure:** rename `nvidia/cublas/bin` → the job still finishes on CPU, and the log shows the fallback.
 5. **CPU-only PC, or a GPU PC with nvidia-smi absent:** the install is identical to v0.2.6, with no nvidia wheels in `.venv`. A repair on a GPU PC keeps the group installed.
 
