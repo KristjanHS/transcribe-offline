@@ -4,8 +4,8 @@ Conditions: https://signpath.org/terms · Apply: https://signpath.org/apply · C
 
 ## Slices
 
-1. [USER] Turn on MFA on GitHub (and on SignPath once invited), then submit https://signpath.org/apply:
-   repo https://github.com/KristjanHS/transcribe-offline, MIT, artifact `Transcribe-Setup.exe` (release.yml, `installer/Setup.cs`).
+1. Done 2026-11-24: application submitted ([values](../signpath-application.md)). [USER] Once invited, turn on MFA
+   on SignPath (required for every team member).
 2. On approval: replace README §Code signing policy's "in progress" with "Free code signing provided by
    [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org)".
 3. On approval: in `release.yml` add `SignPath/github-action-submit-signing-request` after the exe build (secret

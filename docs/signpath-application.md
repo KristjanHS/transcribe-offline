@@ -3,11 +3,7 @@
 Free code signing for `Transcribe-Setup.exe`. Plan: [plans/2026-11-24-signpath-signing.md](plans/2026-11-24-signpath-signing.md).
 Form: https://signpath.org/apply · Terms: https://signpath.org/terms
 
-## Before submitting
-
-- MFA on GitHub (done 2026-11-24); SignPath requires it for every team member, on SignPath too.
-- README [§Code signing policy](../README.md#code-signing-policy) is pushed to `main`, and the release notes link it.
-- Read the SignPath Foundation Code of Conduct linked from the form's first checkbox.
+Submitted 2026-11-24 with the values below; waiting for SignPath's reply.
 
 ## Form fields
 
