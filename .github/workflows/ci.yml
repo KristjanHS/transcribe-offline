@@ -45,4 +45,6 @@ jobs:
           uv export --frozen --no-dev --group gpu --format requirements-txt -o requirements.txt
           uv run pip-audit --disable-pip --require-hashes -r requirements.txt
       - name: The gpu group installs from the lock, as setup.py runs it (last step; drops the dev group)
-        run: uv sync --frozen --no-dev --group gpu
+        run: |
+          uv sync --frozen --no-dev --group gpu
+          uv run --no-sync python -c "import transcribe_offline.setup"  # its deps install without dev

@@ -80,6 +80,8 @@ into the process. The runtime guarantee therefore rests on:
 | huggingface.co → us.aws.cdn.hf.co (`model.bin`) | models | commit + SHA-256 per file in `app/transcribe_offline/models.py` |
 
 Redirect hosts as observed with `curl -sI`; the hashes, not the hosts, are the integrity anchor.
+The model download trusts the system's root certificates plus `certifi`'s (a fresh Windows has
+huggingface.co's root only after Windows itself first checks a chain that needs it; Python never asks).
 python-build-standalone's CDN host is whatever github.com redirects to (unverified until the first
 Windows run). `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
 variables that could redirect a download. Setup also runs `%SystemRoot%\System32\nvidia-smi.exe` (Linux: `/usr/bin/nvidia-smi`, on WSL

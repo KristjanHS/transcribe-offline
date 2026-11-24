@@ -1,5 +1,6 @@
 import hashlib
 import io
+import ssl
 import sys
 from pathlib import Path
 from typing import IO, Any
@@ -161,3 +162,12 @@ def test_main_without_gpu_skips_sync(tmp_path: Path) -> None:
         raise AssertionError("gpu group synced without a capable GPU")
 
     assert setup.main(tmp_path, fail_fetch, detect=lambda: None, sync=no_sync) == 1
+
+
+def test_tls_context_adds_roots_a_fresh_windows_store_lacks() -> None:
+    bare = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)  # no roots: a fresh Windows lacks Amazon's
+    context = setup.tls_context(bare)
+    subjects = [str(cert["subject"]) for cert in context.get_ca_certs()]
+    assert any("'Amazon Root CA 1'" in subject for subject in subjects)  # huggingface.co's root
+    assert context is bare  # added to, not replaced: the system roots stay
+    assert context.verify_mode == ssl.CERT_REQUIRED and context.check_hostname

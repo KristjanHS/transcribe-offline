@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any
 
+import certifi
+
 from transcribe_offline import APP_ROOT
 from transcribe_offline.models import MODELS, MODELS_ROOT, ModelPin
 
@@ -107,11 +109,17 @@ def sync_gpu_group(
     return run(cmd, cwd=root, check=False).returncode == 0
 
 
+def tls_context(context: ssl.SSLContext | None = None) -> ssl.SSLContext:
+    """System roots plus certifi's. Python reads only the roots already in the Windows store; a
+    fresh Windows adds most (huggingface.co's Amazon root too) only when it checks a chain."""
+    context = context or ssl.create_default_context()
+    context.load_verify_locations(certifi.where())
+    return context
+
+
 def open_url(url: str) -> IO[bytes]:
-    # Only https URLs built from models.py pins. Windows cert store via the default context;
-    # urllib honours HTTPS_PROXY.
-    context = ssl.create_default_context()
-    return urllib.request.urlopen(url, context=context, timeout=60)  # noqa: S310  # nosec B310
+    # Only https URLs built from models.py pins; urllib honours HTTPS_PROXY.
+    return urllib.request.urlopen(url, context=tls_context(), timeout=60)  # noqa: S310  # nosec B310
 
 
 def sha256_of(path: Path) -> str:

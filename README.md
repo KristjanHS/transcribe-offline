@@ -100,6 +100,18 @@ replace the `uv sync` and setup lines above with these steps, which you can read
 
 MIT License - see [LICENSE](LICENSE).
 
+## Code signing policy
+
+`Transcribe-Setup.exe` is not signed yet; an application to [SignPath Foundation](https://signpath.org)'s
+free open-source code signing is in progress. Approvals will happen only for exes built by `release.yml` from this repository.
+
+- Committers, reviewers and approvers: [KristjanHS](https://github.com/KristjanHS) (sole maintainer).
+- Privacy: this program will not transfer any information to other networked systems unless specifically
+  requested by the user or the person installing or operating it. Setup downloads from GitHub
+  ([privacy](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)),
+  PyPI ([privacy](https://policies.python.org/pypi.org/Privacy-Notice/)) and Hugging Face
+  ([privacy](https://huggingface.co/privacy)); the app itself makes no network connections.
+
 ---
 
 ## Development

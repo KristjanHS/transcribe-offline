@@ -161,5 +161,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           zip="transcribe-offline-${GITHUB_REF_NAME}.zip"
-          notes="**Download: [$zip](https://github.com/$GH_REPO/releases/download/$GITHUB_REF_NAME/$zip)**, extract it and double-click \`Transcribe-Setup.exe\` inside (see the [README](https://github.com/$GH_REPO#readme)). The other files under Assets are for verification only."
+          notes="**Download: [$zip](https://github.com/$GH_REPO/releases/download/$GITHUB_REF_NAME/$zip)**, extract it and double-click \`Transcribe-Setup.exe\` inside (see the [README](https://github.com/$GH_REPO#readme)). The other files under Assets are for verification only. [Code signing policy](https://github.com/$GH_REPO#code-signing-policy)"
           gh release create "$GITHUB_REF_NAME" "$zip" Transcribe-Setup.exe sbom.cdx.json SHA256SUMS --verify-tag --title "$GITHUB_REF_NAME" --notes "$notes"

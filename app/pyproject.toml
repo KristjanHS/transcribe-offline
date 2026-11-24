@@ -1,10 +1,11 @@
 [project]
 name = "transcribe-offline"
-version = "0.2.7"
+version = "0.2.8"
 description = "Minimal offline speech-to-text GUI and Linux CLI (Estonian + English, CPU or NVIDIA GPU, faster-whisper)."
 license = "MIT"
 requires-python = "==3.12.*"
-dependencies = ["faster-whisper==1.2.1"]
+# certifi: setup.py's root CAs on top of the system store (a fresh Windows lacks huggingface.co's root).
+dependencies = ["certifi==2026.10.18", "faster-whisper==1.2.1"]
 
 [dependency-groups]
 dev = ["bandit", "pip-audit", "pyright", "pytest", "pytest-socket", "ruff", "zizmor"]
