@@ -2,8 +2,8 @@
 
 transcribe-offline turns audio files into `.txt` transcripts on the user's own CPU, or NVIDIA GPU
 when setup finds one. The whole app is
-931 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
-(`installer/Setup.cs`, 181 lines, built into `Transcribe-Setup.exe`) and its fallback `install.bat`,
+939 lines of Python in `app/transcribe_offline/` (`wc -l` of its `.py` files) plus the installer
+(`installer/Setup.cs`, 204 lines, built into `Transcribe-Setup.exe`) and its fallback `install.bat`,
 written to be read in full.
 
 ## What it does
@@ -44,7 +44,7 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 | Transcript leaves the machine (OneDrive, share, WER) | none in the app; user's folder choice, admin WER policy | not verified |
 | Known vulnerability in a pinned dependency | weekly `pip-audit` in CI; new release (see Updates) | CI; native parts manual |
 
-## Honest scope of the import ban
+## Scope of the import ban
 
 Ruff rule `TID251` (config in `app/pyproject.toml`) forbids our code from importing `socket`, `urllib`,
 `http`, `subprocess`, `huggingface_hub`, `ctypes` or calling `os.system`/`popen`/`startfile`/`spawn*`/

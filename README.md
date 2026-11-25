@@ -54,7 +54,8 @@ and writes anywhere except the app folder and next to the chosen audio. A ruff `
 same imports at lint time in every module but `setup.py`, so a stray `socket` or `subprocess` import
 fails CI before the hook would have to block it.
 The hook only sees Python-level calls, not native code such as FFmpeg. [SECURITY.md](SECURITY.md) lists
-what the app reads, writes and refuses.
+what the app reads, writes and refuses. The flowchart and the design decisions, each with the alternative
+it beat, are in [docs/architecture.md](docs/architecture.md).
 
 ## How it was built
 
