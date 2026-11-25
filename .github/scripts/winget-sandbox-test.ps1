@@ -9,6 +9,8 @@ param([string]$Ref, [int]$Minutes = 60)
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# SandboxTest.ps1 inherits this: Windows PowerShell 5.1 otherwise asks before each Invoke-WebRequest it makes.
+$PSDefaultParameterValues['Invoke-WebRequest:UseBasicParsing'] = $true
 trap { Write-Host $_; exit 3 }
 
 # The winget-pkgs maintainers' test script, pinned by commit and SHA-256.
