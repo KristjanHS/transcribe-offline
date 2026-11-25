@@ -40,6 +40,11 @@ $manifest = Rename-Item $staged $version -PassThru
 $sandboxTest = Join-Path $work 'SandboxTest.ps1'
 Invoke-WebRequest -UseBasicParsing $sandboxTestUrl -OutFile $sandboxTest
 if ((Get-FileHash $sandboxTest -Algorithm SHA256).Hash -ne $sandboxTestSha256) { throw "SHA-256 mismatch: $sandboxTestUrl" }
+# Its one Out-File -Path fails on Windows PowerShell 5.1, where the parameter is only -FilePath.
+$text = Get-Content $sandboxTest -Raw
+$patched = $text.Replace('$Script | Out-File -Path ', '$Script | Out-File -FilePath ')
+if ($patched -eq $text) { throw 'SandboxTest.ps1: the Out-File -Path line to patch was not found' }
+Set-Content $sandboxTest $patched -Encoding UTF8 -NoNewline
 
 # CI makes Transcribe-Setup.exe exit without waiting for Enter.
 $inSandbox = {
