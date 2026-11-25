@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
 # Per release: PackageVersion, ReleaseDate, the version folder in RelativeFilePath, InstallerUrl and
-# InstallerSha256 (the zip's line in the release's SHA256SUMS), then submit the three files to microsoft/winget-pkgs.
+# InstallerSha256 (the zip's line in the release's SHA256SUMS). Test with .github/scripts/winget-sandbox-test.ps1,
+# then submit the three files to microsoft/winget-pkgs.
 PackageIdentifier: KristjanHS.TranscribeOffline
 PackageVersion: 0.2.8
 InstallerType: zip
