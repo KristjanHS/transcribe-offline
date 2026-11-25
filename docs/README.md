@@ -36,6 +36,7 @@ The release zip holds `app/`, `Transcribe-Setup.exe` (compiled from `installer/S
 - [`SECURITY.md`](../SECURITY.md): what the app reads, writes and refuses, and what that rests on.
 - [`docs/install.md`](install.md): full install, upgrade and uninstall steps for Windows and Linux.
 - [`docs/architecture.md`](architecture.md): flowchart and design decisions.
+- [`docs/how-it-was-built.md`](how-it-was-built.md): five trails from plan to merged diff, with what review changed.
 - [`CLAUDE.md`](../CLAUDE.md): the invariants a change must keep, written for coding agents.
 
 ## Plans (`docs/plans/archive/`)

@@ -65,7 +65,9 @@ test", but `interp invokehidden` got around the hiding in one line. We dropped i
 `.eval` in runtime modules. Windows took the longest to debug: App Control blocked PyAV 18's
 `_core.pyd`, so the native wheels are pinned to versions that already ran on that PC. Bitdefender then
 quarantined the installer, partly for starting `curl.exe` and `tar.exe`, so it now downloads and unzips
-in managed C# code. The workflow and agent setup are in [claudeconf](https://github.com/KristjanHS/claudeconf).
+in managed C# code. These cases and three more, each with its diff, are in
+[docs/how-it-was-built.md](docs/how-it-was-built.md). The workflow and agent setup are in
+[claudeconf](https://github.com/KristjanHS/claudeconf).
 
 Rewritten from the GUI path of [stt-faster](https://github.com/KristjanHS/stt-faster).
 
