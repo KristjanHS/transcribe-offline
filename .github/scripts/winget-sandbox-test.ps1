@@ -49,7 +49,8 @@ Set-Content $sandboxTest $patched -Encoding UTF8 -NoNewline
 # CI makes Transcribe-Setup.exe exit without waiting for Enter.
 $inSandbox = {
     if (-not (Get-Command transcribe-offline-setup -ErrorAction SilentlyContinue)) { exit 2 }
-    $env:CI = '1'; transcribe-offline-setup 2>&1 | Out-Host; exit $LASTEXITCODE
+    # 2>&1 puts uv's progress lines in the log; "$_" shows them as text, not as Windows PowerShell 5.1 errors.
+    $env:CI = '1'; transcribe-offline-setup 2>&1 | ForEach-Object { "$_" } | Out-Host; exit $LASTEXITCODE
 }
 & $sandboxTest $manifest.FullName $inSandbox -MapFolder $mapped.FullName -Unattended $Minutes
 if ($LASTEXITCODE) { throw "SandboxTest.ps1 failed with exit code $LASTEXITCODE" }
