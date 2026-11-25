@@ -1,8 +1,19 @@
 # Install the winget package in a fresh Windows Sandbox and run transcribe-offline-setup in it, as winget-pkgs
-# reviewers do. Run it on the Windows host after enabling Windows Sandbox:
-#   powershell -ExecutionPolicy Bypass -File <repo>\.github\scripts\winget-sandbox-test.ps1 [-Ref <commit>]
-# Without -Ref it tests the manifests in .github\winget next to this script. With -Ref it fetches the manifests
-# committed at that commit on GitHub, for example an earlier version to check that a bug still shows there.
+# reviewers do. Needs Windows Sandbox enabled. From the repo folder, in a normal (not administrator) PowerShell:
+#   powershell -ExecutionPolicy Bypass -File .github\scripts\winget-sandbox-test.ps1 [-Ref <commit>]
+# -ExecutionPolicy Bypass applies to that one process only; it changes no setting.
+# Without -Ref it tests the manifests in .github\winget. With -Ref it fetches the manifests committed at that
+# commit on GitHub, for example an earlier version to check that a bug still shows there.
+#
+# What it does on this PC (no administrator rights, no system settings changed):
+# - Downloads Microsoft's winget-pkgs Tools\SandboxTest.ps1, pinned below by commit and SHA-256, and runs it.
+#   That script validates the manifest with winget, downloads the current winget release into its cache,
+#   closes an open Sandbox and starts a new one.
+# - Writes only to %TEMP%\transcribe-offline-winget-test and
+#   %LOCALAPPDATA%\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\SandboxTest*. Delete both to clean up.
+# - The install and transcribe-offline-setup run only inside the Sandbox, which is discarded when it closes.
+#   The Sandbox can write to an empty folder in the first location and to SandboxTest's data folder.
+#
 # Exit code: 0 = installed; 1 = transcribe-offline-setup failed (its message is in the log above);
 # 2 = the package did not install; 3 = this test itself failed. The Sandbox window stays open; the next run closes it.
 param([string]$Ref, [int]$Minutes = 60)
@@ -12,6 +23,10 @@ $ProgressPreference = 'SilentlyContinue'
 # SandboxTest.ps1 inherits this: Windows PowerShell 5.1 otherwise asks before each Invoke-WebRequest it makes.
 $PSDefaultParameterValues['Invoke-WebRequest:UseBasicParsing'] = $true
 trap { Write-Host $_; exit 3 }
+$identity = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+if ($identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw 'Run this from a normal PowerShell, not as administrator: it needs no administrator rights.'
+}
 
 # The winget-pkgs maintainers' test script, pinned by commit and SHA-256.
 $sandboxTestUrl = 'https://raw.githubusercontent.com/microsoft/winget-pkgs/9cb4b0c09a1a664d07cd8945bd9bad125f9f6cc8/Tools/SandboxTest.ps1'

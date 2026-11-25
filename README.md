@@ -125,3 +125,5 @@ Run these in `app/` (the Python project; the release zip ships only it, `Transcr
 - Models: `uv run python -m transcribe_offline.setup`
 - Tests: `uv run pytest` (offline unit tests) · `uv run pytest -m slow` (real-model smoke test, needs `models/`)
 - Lint/types: `uv run ruff check . && uv run ruff format --check . && uv run pyright`
+- winget package in a fresh Windows Sandbox (from the repo root, not as administrator):
+  `powershell -ExecutionPolicy Bypass -File .github\scripts\winget-sandbox-test.ps1`. Its header lists what it does to the PC.
