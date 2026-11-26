@@ -35,12 +35,12 @@ Microsoft. Admins can stop that with the WER group policy (`Disabled` or `DontSe
 |--------|---------|-------------|
 | Crafted audio file attacks FFmpeg | `engine.decode_audio`: `file` protocol only, 8 demuxers, audio-codec allow-list (FFmpeg's decoder whitelist, applied before any decoder runs) | unit tests |
 | A memory-corruption bug in FFmpeg or CTranslate2 (or cuBLAS/cuDNN on a GPU) | none: no sandbox, the app runs with the user's rights (accepted risk) | not verified |
-| CUDA or cuDNN aborts the process (a native crash Python cannot catch) | none; Python-visible GPU errors fall back to the CPU (`job.run_job`); the user can delete `app\.venv\Lib\site-packages\nvidia` (Linux: runs `uv sync --frozen --no-dev`) | fallback: unit tests; abort: not verified |
+| CUDA or cuDNN aborts the process (a native crash Python cannot catch) | none. Python-visible GPU errors at model load or on the first file switch the rest of the run to the CPU (`job.run_job`). To stop using the GPU, delete `app\.venv\Lib\site-packages\nvidia` (on Linux, run `uv sync --frozen --no-dev` in `app/`) | fallback: unit tests; abort: not verified |
 | Our code opens a socket, starts a process or writes outside its folder | import ban (`TID251`, `test_imports.py`); runtime audit hook `guard.py` | static checks, unit tests, release smoke test |
 | Native code (FFmpeg, CTranslate2, Tcl) opens a socket | FFmpeg `file` protocol only; our code never passes Tcl text (no `.call`/`.eval`). The audit hook cannot see native code | Tcl: `test_imports.py`; FFmpeg, CTranslate2: not verified |
 | Install or app writes outside the folder | `Transcribe-Setup.exe` / `install.bat` point uv's cache, Python and temp files at `app\`; `guard.py` at runtime. Linux CLI: the user's own uv keeps its cache and Python in the home folder | release CI: install, then smoke test, then a check of the user profile, `%TEMP%` and uv's HKCU key |
 | Tampered download at install time | SHA-256 pins (table below) | `test_setup.py`; release CI runs `Transcribe-Setup.exe`, then `install.bat` |
-| Tampered release zip | provenance attestation | the user (README install step 1) |
+| Tampered release zip | provenance attestation | the user ([docs/install.md](docs/install.md), Windows step 1) |
 | Transcript leaves the machine (OneDrive, share, WER) | none in the app; user's folder choice, admin WER policy | not verified |
 | Known vulnerability in a pinned dependency | weekly `pip-audit` in CI; new release (see Updates) | CI; native parts manual |
 
@@ -75,19 +75,18 @@ into the process. The runtime guarantee therefore rests on:
 | Host | What | Pin |
 |------|------|-----|
 | github.com → release-assets.githubusercontent.com | uv 0.12.19 zip | SHA-256 in `pins.txt` (Linux: the user installs uv) |
-| github.com (python-build-standalone, via uv) | Python 3.12.14 | uv's embedded hash table |
+| releases.astral.sh (Astral's python-build-standalone mirror, via uv) | Python 3.12.14 | version in `pins.txt`; uv's embedded hash table |
 | pypi.org / files.pythonhosted.org | wheels | `app/uv.lock` hashes (`uv sync --frozen`) |
 | huggingface.co → us.aws.cdn.hf.co (`model.bin`) | models | commit + SHA-256 per file in `app/transcribe_offline/models.py` |
 
 Redirect hosts as observed with `curl -sI`; the hashes, not the hosts, are the integrity anchor.
 The model download trusts the system's root certificates plus `certifi`'s (a fresh Windows has
 huggingface.co's root only after Windows itself first checks a chain that needs it; Python never asks).
-python-build-standalone's CDN host is whatever github.com redirects to (unverified until the first
-Windows run). `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
+The Python host is the one uv 0.12.19 lists in `uv python list --show-urls`. `Transcribe-Setup.exe` and `install.bat` clear inherited `UV_*` and `SSL_CERT_*`
 variables that could redirect a download. Setup also runs `%SystemRoot%\System32\nvidia-smi.exe` (Linux: `/usr/bin/nvidia-smi`, on WSL
-`/usr/lib/wsl/lib/nvidia-smi`; a read-only GPU query) and, when it reports driver 528.33+, 4 GB+ and compute capability 7.0+, `uv sync --frozen --no-dev --group
+`/usr/lib/wsl/lib/nvidia-smi`; a read-only GPU query) and, when it reports driver 528.33+, 4000 MiB+ of memory and compute capability 7.0+, `uv sync --frozen --no-dev --group
 gpu`: about 1.3 GB of NVIDIA wheels from PyPI, pinned by `app/uv.lock` like the rest. On Linux you can
-do the same steps yourself with `nvidia-smi`, `uv` and `curl` + `sha256sum` (README, "Without the setup script").
+do the same steps yourself with `nvidia-smi`, `uv` and `curl` + `sha256sum` ([docs/install.md](docs/install.md), "Without the setup script").
 
 Trust chain: release zip (provenance attestation; the exe inside also carries the attestation of the
 run that compiled it) → uv zip hash → uv's Python hashes → lock wheel

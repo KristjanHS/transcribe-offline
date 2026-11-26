@@ -12,8 +12,8 @@ Windows 10 1803+ or 11, no admin rights:
 
 1. Download `transcribe-offline-vX.Y.Z.zip` from the [latest release](https://github.com/KristjanHS/transcribe-offline/releases/latest)
    and extract it to a folder OneDrive doesn't sync.
-2. Double-click `Transcribe-Setup.exe`, then start `Transcribe.bat`. Pick audio files, choose the
-   language, press Start.
+2. Double-click `Transcribe-Setup.exe`, then start the `Transcribe.bat` that setup creates in the
+   folder. Pick audio files, choose the language, press Start.
 
 With [Scoop](https://scoop.sh), which skips the SmartScreen prompt:
 
@@ -40,15 +40,17 @@ Windows or an antivirus blocks setup, upgrades, and a Linux install without the 
 - Saves each transcript as a `.txt` file next to its audio file.
 - On Windows it's a small GUI. On Linux, `./transcribe -l et|en <files>` exits with 0 when every file
   worked, 1 if any failed, and 130 on Ctrl+C.
-- Runs on an NVIDIA GPU when setup finds one (GTX 16 / RTX or newer, 4 GB+, driver 528.33+), and falls
-  back to the CPU if the GPU fails.
+- Runs on an NVIDIA GPU when setup finds one (compute capability 7.0+, such as GTX 16 or RTX, 4000 MiB+
+  of memory, driver 528.33+). If the model fails to load on the GPU, or the first file fails there, the
+  rest of the run uses the CPU. A native CUDA or cuDNN crash closes the app instead.
 - Needs no network once installed.
 
 ## How it works
 
-Install time and run time are split. Setup is the only code that goes online: it downloads uv, Python,
-the locked libraries and the models, and checks each file against a SHA-256 pinned in the repo
-(`pins.txt`, `app/uv.lock`, `app/transcribe_offline/models.py`). The app itself runs under `guard.py`,
+Install time and run time are split. Setup is the only code that goes online. It downloads uv, Python,
+the locked libraries and the models, and checks uv, the libraries and the models against SHA-256 hashes
+in the repo (`pins.txt`, `app/uv.lock`, `app/transcribe_offline/models.py`). For Python, `pins.txt` fixes
+only the version; uv checks the download against the hashes built into it. The app itself runs under `guard.py`,
 a Python audit hook (PEP 578) installed before anything else loads. It refuses sockets, child processes,
 and writes anywhere except the app folder and next to the chosen audio. A ruff `TID251` ban rejects the
 same imports at lint time in every module but `setup.py`, so a stray `socket` or `subprocess` import
@@ -106,5 +108,6 @@ free open-source code signing is in progress. Approvals will happen only for exe
 - Privacy: this program will not transfer any information to other networked systems unless specifically
   requested by the user or the person installing or operating it. Setup downloads from GitHub
   ([privacy](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)),
+  Astral, for Python ([privacy](https://astral.sh/legal/privacy)),
   PyPI ([privacy](https://policies.python.org/pypi.org/Privacy-Notice/)) and Hugging Face
   ([privacy](https://huggingface.co/privacy)); the app itself makes no network connections.

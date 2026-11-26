@@ -21,22 +21,25 @@ flowchart TD
 ```
 
 Setup runs once per folder. `Transcribe-Setup.exe` (built from `installer/Setup.cs`) and `install.bat` do
-the same steps: fetch uv, check its hash against `pins.txt`, install the locked Python and libraries, then
-run `python -m transcribe_offline.setup`. That module asks `nvidia-smi` about the GPU, adds the locked
+the same steps: fetch uv, check its hash against `pins.txt`, install Python (the version in `pins.txt`,
+checked against the hashes built into uv) and the locked libraries, then run `python -m transcribe_offline.setup`. That module asks `nvidia-smi` about the GPU, adds the locked
 `gpu` dependency group when the card qualifies, and downloads each model file with its hash checked.
 
 At run time `__main__.py` installs `guard.py` before importing anything else. The GUI and the CLI share
 one job runner. `engine.py` opens the audio with PyAV, allowing only local files and a fixed list of
 containers and decoders, then hands the samples to faster-whisper. The transcript is written to
 `<name>.txt.partial` and renamed to `<name>.txt` only when it is complete, so a cancel or crash never
-leaves a half-written `.txt`. If CUDA fails, the job reloads the model on the CPU.
+leaves a half-written `.txt`. If `<name>.txt` already exists, `engine.unique_destination` picks
+`<name> (2).txt`, then `(3)` and so on. It checks again just before the rename and never overwrites. If the model fails to load on the GPU,
+or the first file fails there, the job reloads the model on the CPU for the rest of the run. A native
+CUDA or cuDNN crash ends the process instead.
 
 ## Decisions
 
 | Decision | Rejected alternative |
 |---|---|
 | Rewrite the GUI path of stt-faster from scratch, keeping only what this app needs. | Generating an export from stt-faster, or sharing a core library with it. Both keep stt-faster's extension points, which a reviewer would have to read. |
-| Pin every install-time download: uv by SHA-256, libraries by `uv.lock` hashes, models by commit and SHA-256. No "latest" lookups, no self-update. | A single offline bundle of several GB. |
+| Pin every install-time download: uv by SHA-256, Python by version (checked against the pinned uv's built-in hashes), libraries by `uv.lock` hashes, models by commit and SHA-256. No "latest" lookups, no self-update. | A single offline bundle of several GB. |
 | On Windows the extracted folder is the install. Setup needs no admin rights and writes nothing outside it. | Copying the app into `%LOCALAPPDATA%`. |
 | `setup.py` downloads models with the standard library from explicit `huggingface.co/<repo>/resolve/<commit>/<file>` URLs; the app loads them from a folder path. | `huggingface_hub.snapshot_download`, which builds its own URLs and keeps a cache outside the folder. |
 | GPU detection runs in `setup.py`, in Python with unit tests. | Detecting in `Setup.cs` and `install.bat`. That changes the exe hash, which resets its SmartScreen reputation, and puts the same logic in C# and batch with no tests. |

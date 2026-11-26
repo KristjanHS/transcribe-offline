@@ -5,14 +5,19 @@
 1. Open the [latest release](https://github.com/KristjanHS/transcribe-offline/releases/latest),
    download `transcribe-offline-vX.Y.Z.zip` under **Assets** and extract it to any folder.
    Don't use a OneDrive-synced folder (Desktop and Documents often are).
-   Optional, before extracting: check that the zip is the one GitHub built with
-   `gh attestation verify transcribe-offline-vX.Y.Z.zip -R KristjanHS/transcribe-offline`
-   (without `gh`: compare PowerShell `Get-FileHash transcribe-offline-vX.Y.Z.zip` with `SHA256SUMS`).
+   Optional, before extracting: check that the zip is the one GitHub built from this repository with
+   `gh attestation verify transcribe-offline-vX.Y.Z.zip -R KristjanHS/transcribe-offline`.
+   Comparing PowerShell `Get-FileHash transcribe-offline-vX.Y.Z.zip` with `SHA256SUMS` only catches a
+   corrupted download: both files come from the same release, so it can't detect tampering.
 2. Double-click `Transcribe-Setup.exe`. It downloads about 3.5 GB (uv, Python, libraries, two speech
-   models), plus 1.3 GB of CUDA libraries on a PC with an NVIDIA GPU (GTX 16 / RTX series or newer, 4 GB+ memory, driver 528.33+),
-   which then transcribes on the GPU, falling back to the CPU if the GPU fails. To stop using the GPU,
-   delete `app\.venv\Lib\site-packages\nvidia` (setup puts it back when run again).
-   Setup verifies every file against a pinned hash. If it stops, run it again to continue; it
+   models), plus 1.3 GB of CUDA libraries on a PC with an NVIDIA GPU (compute capability 7.0+, such as
+   GTX 16 or RTX, 4000 MiB+ of memory, driver 528.33+). The app then transcribes on the GPU. If the
+   model fails to load there, or the first file fails, the rest of the run uses the CPU; a native CUDA
+   or cuDNN crash closes the app instead. To stop using the GPU, delete
+   `app\.venv\Lib\site-packages\nvidia` (setup puts it back when run again).
+   Setup checks every download against a hash: uv and the models against `pins.txt` and `models.py`,
+   the libraries against `uv.lock`, and Python against the hashes built into the pinned uv.
+   If it stops, run it again to continue; it
    re-hashes uv and the models and downloads only what is missing or does not match.
    Windows may warn that it is unsigned (More info → Run anyway); that is expected.
    If Windows blocks it outright (Smart App Control or your organisation's App Control): delete the
@@ -20,7 +25,7 @@
    `install.bat` instead. It does the same steps. Use `install.bat` too if your antivirus quarantines
    `Transcribe-Setup.exe`: it is a small unsigned exe that downloads and unpacks files, which heuristics
    can mistake for malware.
-3. Start `Transcribe.bat` in the folder (make a shortcut to it on the Desktop if you like). After moving
+3. Start `Transcribe.bat`, which setup creates in the folder (make a shortcut to it on the Desktop if you like). After moving
    the folder, run the setup again.
 
 With [Scoop](https://scoop.sh) instead (no SmartScreen prompt, since Scoop downloads without the browser's
@@ -53,8 +58,10 @@ Each transcript is saved beside its audio as `.txt` and its path is printed; pro
 Ctrl+C (the unfinished transcript is removed). The same guard as on Windows blocks network, child
 processes and writes outside the folder at runtime; `./transcribe` runs the app's own Python, never uv.
 
-On an NVIDIA GPU (GTX 16 / RTX series or newer, 4 GB+ memory, driver 528.33+; WSL 2 works too) setup
-also installs 1.3 GB of CUDA libraries and `./transcribe` uses the GPU, falling back to the CPU if it fails.
+On an NVIDIA GPU (compute capability 7.0+, such as GTX 16 or RTX, 4000 MiB+ of memory, driver 528.33+;
+WSL 2 works too) setup also installs 1.3 GB of CUDA libraries and `./transcribe` uses the GPU. The CPU
+takes over in the same cases as on Windows: a failed model load or a failed first file, but not a
+native CUDA crash.
 To stop using it, run `uv sync --frozen --no-dev` in `app/` (removes them; setup installs them again).
 
 Unlike the Windows setup, uv keeps its download cache and the Python it installs in your home folder

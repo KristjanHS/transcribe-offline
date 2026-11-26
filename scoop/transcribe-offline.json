@@ -1,6 +1,6 @@
 {
     "version": "0.2.8",
-    "description": "Offline Estonian and English speech-to-text (faster-whisper, CPU or NVIDIA GPU). Downloads about 3.5 GB once, each file verified against a pinned SHA-256.",
+    "description": "Offline Estonian and English speech-to-text (faster-whisper, CPU or NVIDIA GPU). Downloads about 3.5 GB once; uv, the libraries and the models are checked against SHA-256 hashes pinned in the repo.",
     "homepage": "https://github.com/KristjanHS/transcribe-offline",
     "license": "MIT",
     "url": "https://github.com/KristjanHS/transcribe-offline/releases/download/v0.2.8/transcribe-offline-v0.2.8.zip",

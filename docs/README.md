@@ -7,7 +7,7 @@
 - [`transcribe_offline/guard.py`](../app/transcribe_offline/guard.py): audit hook that refuses network, child processes and writes outside the allowed folders.
 - [`transcribe_offline/app.py`](../app/transcribe_offline/app.py): Tkinter GUI with file picker, language choice, progress and cancel.
 - [`transcribe_offline/cli.py`](../app/transcribe_offline/cli.py): Linux command line, `-l et|en`, exit codes 0, 1 and 130.
-- [`transcribe_offline/job.py`](../app/transcribe_offline/job.py): the worker thread the GUI and CLI share, including the CPU fallback when CUDA fails.
+- [`transcribe_offline/job.py`](../app/transcribe_offline/job.py): the worker thread the GUI and CLI share, including the CPU fallback when the GPU fails at model load or on the first file.
 - [`transcribe_offline/engine.py`](../app/transcribe_offline/engine.py): model loading, PyAV decoding behind the format and codec whitelist, `.txt` writing.
 - [`transcribe_offline/models.py`](../app/transcribe_offline/models.py): model repos, commits and SHA-256 hashes.
 - [`transcribe_offline/setup.py`](../app/transcribe_offline/setup.py): install-time GPU check and model download; the one module allowed network and processes.
@@ -23,7 +23,7 @@
 - [`.github/winget/`](../.github/winget): winget manifests for submission to microsoft/winget-pkgs.
 
 The release zip holds `app/`, `Transcribe-Setup.exe` (compiled from `installer/Setup.cs`), `install.bat`,
-`pins.txt` and `LICENSE`.
+`pins.txt` and `LICENSE`. Setup adds `Transcribe.bat`, the app's launcher.
 
 ## CI
 

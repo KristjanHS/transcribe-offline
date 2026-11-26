@@ -5,8 +5,10 @@ pins.txt text eol=crlf
 transcribe text eol=lf
 # The release zip holds only what the user runs: Transcribe-Setup.exe (added by release.yml),
 # install.bat, pins.txt, LICENSE, app/. The exe's source is proven by the build attestation.
+# Scoop reads its manifest from main by URL, so scoop/ stays out too.
 .claude/ export-ignore
 installer/ export-ignore
+scoop/ export-ignore
 .github/ export-ignore
 docs/ export-ignore
 app/tests/ export-ignore
